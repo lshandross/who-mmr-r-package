@@ -1,0 +1,252 @@
+---
+title: "Function Braindump Stuff"
+output: html_notebook
+---
+#Read-in Data
+```{r}
+library(tidyr)
+library(tidyverse)
+library(readxl)
+library(dplyr) #maybe don't need
+library(devtools)
+library(usethis)
+
+country_info <- read_excel("country list_ 26 March 2019.xlsx")
+mmr_est_unrounded <- read.csv("mmr_unrounded.csv")
+live_birth_projections <- read_excel("wpp2019_Births-TFR-GFR-Female1549.xlsx")
+regional_groupings <- read.csv("regional_groupings_20190910_la_ac.csv")
+
+#load_all("WHOmmr3")
+```
+
+#Data Cleaning
+```{r}
+country_info <- country_info %>%
+  select(`Code`, `ISO_Numeric_Code_CODE`, `Title`) 
+  
+mmr_est_unrounded <- mmr_est_unrounded %>%
+  filter(`bound` == "point", `year` >= 2010) %>%
+  select(-c(`q`, `perc`, `bound`)) %>%
+  mutate("MMR" = `value` * 100000)
+
+mmr_est_unrounded_pwider <- mmr_est_unrounded %>%
+  select(-c(`value`)) %>%
+  pivot_wider(names_from = `year`, values_from = `MMR`)
+  
+regional_groupings <- regional_groupings %>%
+  select(`ISOCode`, `Country.x`, `sdg_1`)
+
+live_birth_projections2030 <- live_birth_projections %>% 
+  filter(Year == 2030)
+colnames(live_birth_projections2030)[colnames(live_birth_projections2030) == "Location"] <- "name"
+```
+
+#Calc BAU ARR
+- original parameters: mmr tibble, time1, time2
+- UN-HARDCODE specified years when they're the name of the columns
+- returns: tibble w/ added observed ARR for specified time period
+
+```{r}
+calc_bau_arr <- function(mmr_pivotwider_tibble, start_year, end_year) {
+  length_years = end_year - start_year
+  arr = (-1/(length_years))*log(mmr_pivotwider_tibble[["2017"]]/mmr_pivotwider_tibble$`2010`)
+  return(cbind(mmr_pivotwider_tibble, arr))
+}
+
+calc_bau_arr(mmr_est_unrounded_pwider, 2010, 2017)
+```
+
+#MMR Projections (for one country)
+- original parameters: mmr tibble, time1, time2, country_iso_code
+- UNHARDCODE the number 2015 and the column name
+- FIX the weird t1, t2 parameters, eg the current ones are for arr rather than the sequence (ADD/UNHARDCODE the parameters for mmr t1 and t2 used in "years")
+- returns: a single column tibble w/ all the projected MMRs
+
+```{r}
+mmr_country_projections <- 
+  function(mmr_pivotwider_tibble, mmr_start_year = 2016, mmr_end_year = 2030, bau_start_year = 2010, bau_end_year = 2017, iso_code){
+
+  years <- seq(mmr_start_year, mmr_end_year)
+  num_years <- length(years)
+  bau_tibble <- calc_bau_arr(mmr_pivotwider_tibble, bau_start_year, bau_end_year) %>% 
+    filter(iso == iso_code)
+  projection <- rep(NA,num_years) #What does this do?
+  projection <- bau_tibble$`2015` * exp(-(bau_tibble$`arr`) * (years-2015))
+  return(projection)
+  }
+
+mmr_country_projections(mmr_est_unrounded_pwider, 2016, 2030, 2010, 2017, iso_code = "AFG")
+```
+
+#MMR Projections (all countries)
+- original parameters: mmr tibble, time1, time2
+- UNHARDCODE column names
+- FIX the weird t1, t2 parameters, eg the current ones are for arr rather than the sequence 
+- RENAME "col" and "namecountry2" to something more intuitive
+- returns: a single column tibble w/ all the projected MMRs
+- is there a way to remove the column numbers of the final tibble?
+
+```{r}
+mmr_allcountries_projections <- function(mmr_pivotwider_tibble, bau_start_year, bau_end_year){
+  bau_tibble  <- NULL
+  for(i in 1:nrow(calc_bau_arr(mmr_pivotwider_tibble, bau_start_year, bau_end_year))){
+    col <- mmr_country_projections(mmr_pivotwider_tibble, iso_code = calc_bau_arr(mmr_pivotwider_tibble, bau_start_year, bau_end_year)$iso[i])
+    bau_tibble <- rbind(bau_tibble, col)
+    colnames(bau_tibble) <- c("2016", "2017", "2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025", "2026", "2027", "2028", "2029", "2030")
+  }
+
+  namecountry2 <- select(calc_bau_arr(mmr_pivotwider_tibble, bau_start_year, bau_end_year), "iso" , "name", "arr")
+  mmrprojcountry2 <- cbind(namecountry2, bau_tibble)
+  #note that the above step is so that the tibble is nicely formatted w/ iso, name, arr of countries
+ 
+  #mmrprojcountry2<- mmrprojcountry2[, -1]
+   
+  return(mmrprojcountry2)
+  
+  
+}
+
+mmr_allcountries_projections(mmr_est_unrounded_pwider, 2010, 2017)
+```
+
+
+#SDG MMR Calculation, Categorization, and Adjustment
+#This function currently just calculates the BAU MMR of 2030
+- original parameters: mmr tibble, single year, global arr
+- UNHARDCODE the number 2015 and the column name; the 2010 and 2017 in calc_bau_arr() function call
+- SOLVE the issues w/ multiple tibbles and the resulting dependencies
+- BAU ARR FUNCTION STUFF - replace it somehow and/or fix the stuff in that function then apply changes here
+- returns: tibble w/ countries'observed arr, mmr projections during time period, 2030 projection, each country's MMR category, each country's adjusted SDG goal
+
+```{r}
+SDG_MMR_single_year <- function(mmr_pivotwider_tibble, year_to_calc_sdg, reference_year = 2015, global_arr) {
+  SDG_projection <- calc_bau_arr(mmr_pivotwider_tibble, 2010, 2017)$`2015` * exp(-global_arr * (year_to_calc_sdg - reference_year))
+  MMR_SDG_projection <- cbind(mmr_allcountries_projections(mmr_pivotwider_tibble, 2010, 2017), SDG_projection)
+  MMR_SDG_projection_categorized <- MMR_SDG_projection %>% 
+    mutate(Category = ifelse(SDG_projection > 140,"high mmr", "acceptable mmr")) %>% 
+    mutate(new_SDG_projection = ifelse(SDG_projection > 140, 140, SDG_projection))
+  return(MMR_SDG_projection_categorized)
+}
+
+global_arr <- mean(calc_bau_arr(mmr_est_unrounded_pwider, 2010, 2017)$`arr`)
+
+SDG_MMR_single_year(mmr_est_unrounded_pwider, 2030, 2015, global_arr)
+```
+
+#Get ARR SDG Target 
+- original parameters: mmr2015_country (vector w/ MMR for 2015 for all countries), births2030_country (vector w/ births for 2030 for all countries), nproject (number of years to project (2030 - 2015))
+- UNHARDCODE the specified years each argument holds (eg make it possible for users to use different years for projection bases and different year ranges, etc)
+- consider making the values that the initial arguments hold different and actually calculated in the function body
+- returns: tibble w/ global(?) arr sdg target for the cumulative period of 15 years
+#Pseudo code
+#This should feed into the 2030 mmr sdg projections (aka the mmr we hope to achieve for each country)
+#Also, what does this return? Do we need to run this function multiple times
+#In general, need help understanding this function
+```{r}
+get_arr_sdgtarget <- function(mmr2015_country,
+  births2030_country, # vector with births for 2030 for all countries (countries need to be in same order as mmr2015_country)
+  nproject  # number of years to project (2030 - 2015)
+){
+  optimize(squared_diff, interval = c(-1,1),
+           mmr2015_country = mmr2015_country,
+           births2030_country = births2030_country,
+           nproject = nproject)
+}
+
+#the squared_diff argument in optimize can take a dummy value for now, we'll calculate the actual value later using the squared_diff function 
+
+```
+
+```{r}
+#For optimization purposes in conjunction w/ function above
+squared_diff <- function(global_arr, mmr2015_country,
+                         births2030_country, nproject){
+  mmr2030 <- get_mmr2030_sdgprojections(mmr2015_country = mmr2015_country, arr = global_arr, nproject = nproject)
+  mmr_global <- sum(mmr2030*births2030_country)/sum(births2030_country)
+  # could replace by function once you have it
+  #mmr_global <- get_aggregate_mmr(mmr_country = sdg, births2030_country)
+  (mmr_global - 70)^2
+}
+```
+
+
+#Calculate SDG ARR for each country Based on SDG MMR 
+#Pseudo Code
+```{r}
+get_sdgarr_country <- function(
+        mmr2015_country, arr_sdg, nproject){
+  mmr2030_country <- get_mmr2030_sdgprojections(mmr2015_country, arr_sdg, nproject)
+  # if you have this kind of function
+  #  get_arr(mmr_start = mmr2015_country, mmr_end = mmr2030_country)
+  -1/nproject*log(mmr2030_country/ mmr2015_country)
+}
+```
+
+
+#(BAU) MMR Regional Summaries
+- original parameters: mmr tibble, countries/regions tibble, live birth tibble
+- UNHARDCODE specified years when they're the name of the columns
+- UNHARDCODE the stuff inside the summarize function if possible, ie see if a column name can vary so the general formula can written just once
+- returns: summary table of mmr by year for different regions and globally for a specified time range
+
+#Consider making a version for this using SDG numbers
+
+```{r}
+#some data cleaning
+colnames(country_info)[colnames(country_info)== "Code"] <- "ISOCode"
+
+countries_and_regions <- country_info %>% 
+  left_join(regional_groupings, by = c("ISOCode" = "ISOCode")) %>%
+  select(-c(`Country.x`))
+
+colnames(countries_and_regions)[colnames(countries_and_regions)== "ISO_Numeric_Code_CODE"] <- "ISONum"
+
+
+#function
+mmr_regional_global_summarize <-
+  function(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble){
+    mmr_df <- left_join(mmr_allcountries_projections(mmr_pivotwider_tibble, 2010, 2017), countries_regions_tibble, by = c("iso" = "ISOCode")) %>%
+    left_join(birth_projections_tibble, by = c("ISONum" = "LocID"))
+    global <- mmr_df %>%
+      summarise(`MMR in 2016` = (sum(`2016`*`Births`))/(sum(`Births`)),
+                `MMR in 2017` = (sum(`2017`*`Births`))/(sum(`Births`)),
+                `MMR in 2018` = (sum(`2018`*`Births`))/(sum(`Births`)),
+                `MMR in 2019` = (sum(`2019`*`Births`))/(sum(`Births`)),
+                `MMR in 2020` = (sum(`2020`*`Births`))/(sum(`Births`)),
+                `MMR in 2021` = (sum(`2021`*`Births`))/(sum(`Births`)),
+                `MMR in 2022` = (sum(`2022`*`Births`))/(sum(`Births`)),
+                `MMR in 2023` = (sum(`2023`*`Births`))/(sum(`Births`)),
+                `MMR in 2024` = (sum(`2024`*`Births`))/(sum(`Births`)),
+                `MMR in 2025` = (sum(`2025`*`Births`))/(sum(`Births`)),
+                `MMR in 2026` = (sum(`2026`*`Births`))/(sum(`Births`)),
+                `MMR in 2027` = (sum(`2027`*`Births`))/(sum(`Births`)),
+                `MMR in 2028` = (sum(`2028`*`Births`))/(sum(`Births`)),
+                `MMR in 2029` = (sum(`2029`*`Births`))/(sum(`Births`)),
+                `MMR in 2030` = (sum(`2030`*`Births`))/(sum(`Births`))) %>%
+      mutate(`sdg_1` = "Global") %>%
+      select(`sdg_1`, `MMR in 2016`, `MMR in 2017`, `MMR in 2018`, `MMR in 2019`, `MMR in 2020`, `MMR in 2021`, `MMR in 2022`, `MMR in 2023`, `MMR in 2024`, `MMR in 2025`, `MMR in 2026`, `MMR in 2027`, `MMR in 2028`, `MMR in 2029`, `MMR in 2030`)
+    regional <- mmr_df %>%
+      group_by(sdg_1) %>%
+      summarise(`MMR in 2016` = (sum(`2016`*`Births`))/(sum(`Births`)),
+                `MMR in 2017` = (sum(`2017`*`Births`))/(sum(`Births`)),
+                `MMR in 2018` = (sum(`2018`*`Births`))/(sum(`Births`)),
+                `MMR in 2019` = (sum(`2019`*`Births`))/(sum(`Births`)),
+                `MMR in 2020` = (sum(`2020`*`Births`))/(sum(`Births`)),
+                `MMR in 2021` = (sum(`2021`*`Births`))/(sum(`Births`)),
+                `MMR in 2022` = (sum(`2022`*`Births`))/(sum(`Births`)),
+                `MMR in 2023` = (sum(`2023`*`Births`))/(sum(`Births`)),
+                `MMR in 2024` = (sum(`2024`*`Births`))/(sum(`Births`)),
+                `MMR in 2025` = (sum(`2025`*`Births`))/(sum(`Births`)),
+                `MMR in 2026` = (sum(`2026`*`Births`))/(sum(`Births`)),
+                `MMR in 2027` = (sum(`2027`*`Births`))/(sum(`Births`)),
+                `MMR in 2028` = (sum(`2028`*`Births`))/(sum(`Births`)),
+                `MMR in 2029` = (sum(`2029`*`Births`))/(sum(`Births`)),
+                `MMR in 2030` = (sum(`2030`*`Births`))/(sum(`Births`)))
+    rbind(global, regional) %>%
+      rename(Region=sdg_1)
+  }
+
+mmr_regional_global_summarize(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030)
+```
+
+
