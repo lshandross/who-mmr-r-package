@@ -117,6 +117,7 @@ mmr_allcountries_projections(mmr_est_unrounded_pwider, 2010, 2017)
 - SOLVE the issues w/ multiple tibbles and the resulting dependencies
 - BAU ARR FUNCTION STUFF - replace it somehow and/or fix the stuff in that function then apply changes here
 - returns: tibble w/ countries'observed arr, mmr projections during time period, 2030 projection, each country's MMR category, each country's adjusted SDG goal
+- Do we want this to simply add a column to the tibble passed thru asa an argument? Or just the calculated SDG MMR? Or maybe that plus the country codes/names? 
 
 ```{r}
 SDG_MMR_single_year <- function(mmr_pivotwider_tibble, year_to_calc_sdg, reference_year = 2015, global_arr) {
@@ -143,11 +144,15 @@ SDG_MMR_single_year(mmr_est_unrounded_pwider, 2030, 2015, global_arr)
 #Also, what does this return? Do we need to run this function multiple times
 #In general, need help understanding this function
 ```{r}
-get_arr_sdgtarget <- function(mmr2015_country,
-  births2030_country, # vector with births for 2030 for all countries (countries need to be in same order as mmr2015_country)
+get_arr_sdgtarget <- function(mmr_pivotwider_tibble,
+  birth_projections_tibble, # vector with births for 2030 for all countries (countries need to be in same order as mmr2015_country)
   nproject  # number of years to project (2030 - 2015)
 ){
-  optimize(squared_diff, interval = c(-1,1),
+  mmr2015_country = select(mmr_pivotwider_tibble, `2015`)
+  births2030_country = select(birth_projections_tibble, `Births`)
+  
+  
+  optimize(squared_diff = 0.25, interval = c(-1,1),
            mmr2015_country = mmr2015_country,
            births2030_country = births2030_country,
            nproject = nproject)
@@ -155,20 +160,75 @@ get_arr_sdgtarget <- function(mmr2015_country,
 
 #the squared_diff argument in optimize can take a dummy value for now, we'll calculate the actual value later using the squared_diff function 
 
+get_arr_sdgtarget(mmr_est_unrounded_pwider, live_birth_projections2030, 15)
+
+optimize(squared_diff, interval = c(-1,1),
+           mmr2015_country = select(mmr_est_unrounded_pwider, `2015`),
+           births2030_country = select(live_birth_projections2030, `Births`),
+           nproject = 15)
+
+
+
 ```
 
 ```{r}
 #For optimization purposes in conjunction w/ function above
-squared_diff <- function(global_arr, mmr2015_country,
+
+  squared_diff <- function(global_arr, mmr2015_country,
                          births2030_country, nproject){
-  mmr2030 <- get_mmr2030_sdgprojections(mmr2015_country = mmr2015_country, arr = global_arr, nproject = nproject)
-  mmr_global <- sum(mmr2030*births2030_country)/sum(births2030_country)
-  # could replace by function once you have it
-  #mmr_global <- get_aggregate_mmr(mmr_country = sdg, births2030_country)
+  
+  testmmr <- select(SDG_MMR_single_year(mmr2015_country, year_to_calc_sdg = 2030, reference_year = 2015, global_arr), `SDG_projection`)
+  testbirth <- births2030_country %>%
+  right_join(mmr_est_unrounded_pwider, by = c("name" = "name")) %>%
+    select(`Births`)
+  
+  mb1 <- filter(testmmr*testbirth, `SDG_projection`>100)
+  mb2 <- filter(testmmr*testbirth, `SDG_projection`<=100)
+  b1 <- filter(testbirth, `Births`>500)
+  b2 <- filter(testbirth, `Births`<=500)
+  mmr_global <- (sum(mb1) + sum(mb2)) / (sum(b1) + sum(b2)) 
   (mmr_global - 70)^2
+
 }
+
+  squared_diff(global_arr, mmr_est_unrounded_pwider,
+                         live_birth_projections2030, 15)
+  
+  
+
 ```
 
+squared_diff <- function(global_arr, mmr_pivotwider_tibble,
+                          birth_projections_tibble, nproject){
+
+   #mmr2015_country = select(mmr_pivotwider_tibble, `2015`)
+   births2030_country = birth_projections_tibble %>% right_join(mmr_pivotwider_tibble, by = c("name" = "name")) %>%
+     select(`Births`)
+
+   mmr2030 <- select(SDG_MMR_single_year(mmr_pivotwider_tibble, year_to_calc_sdg = 2030, reference_year = 2015, global_arr), `SDG_projection`)
+
+  mb_over100 <- filter(mmr2030*births2030_country, `2015`>100)
+   mb_under100 <- filter(mmr2030*births2030_country, `2015`<=100)
+   b1 <- filter(births2030_country, `Births`>500)
+   b2 <- filter(births2030_country, `Births`<=500)
+   mmr_global <- (sum(mb) + sum(mb)) / (sum(b1) + sum(b2))
+
+   #mmr_global <- sum(mmr2030*births2030_country)/sum(births2030_country)
+
+#the sdg mmr function currently just adds a row in the tibble but for this function we want just the info it returns
+
+#could replace by function once you have it
+
+#mmr_global <- get_aggregate_mmr(mmr_country = sdg, births2030_country)
+
+   return (mmr_global - 70)^2
+ }
+
+
+#what is this returning? what is the goal of this function?
+#goal is to return the sq diff of the global mmr goal
+
+--
 
 #Calculate SDG ARR for each country Based on SDG MMR 
 #Pseudo Code
