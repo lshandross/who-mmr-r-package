@@ -47,22 +47,24 @@ colnames(live_birth_projections2030)[colnames(live_birth_projections2030) == "Lo
 - returns: tibble w/ added observed ARR for specified time period
 
 ```{r}
+#function
 calc_bau_arr <- function(mmr_pivotwider_tibble, start_year, end_year) {
   length_years = end_year - start_year
   arr = (-1/(length_years))*log(mmr_pivotwider_tibble[["2017"]]/mmr_pivotwider_tibble$`2010`)
   return(cbind(mmr_pivotwider_tibble, arr))
 }
 
+#example
 calc_bau_arr(mmr_est_unrounded_pwider, 2010, 2017)
 ```
 
 #MMR Projections (for one country)
 - original parameters: mmr tibble, time1, time2, country_iso_code
 - UNHARDCODE the number 2015 and the column name
-- FIX the weird t1, t2 parameters, eg the current ones are for arr rather than the sequence (ADD/UNHARDCODE the parameters for mmr t1 and t2 used in "years")
 - returns: a single column tibble w/ all the projected MMRs
 
 ```{r}
+#function
 mmr_country_projections <- 
   function(mmr_pivotwider_tibble, mmr_start_year = 2016, mmr_end_year = 2030, bau_start_year = 2010, bau_end_year = 2017, iso_code){
 
@@ -75,6 +77,7 @@ mmr_country_projections <-
   return(projection)
   }
 
+#example
 mmr_country_projections(mmr_est_unrounded_pwider, 2016, 2030, 2010, 2017, iso_code = "AFG")
 ```
 
@@ -87,6 +90,7 @@ mmr_country_projections(mmr_est_unrounded_pwider, 2016, 2030, 2010, 2017, iso_co
 - is there a way to remove the column numbers of the final tibble?
 
 ```{r}
+#function
 mmr_allcountries_projections <- function(mmr_pivotwider_tibble, bau_start_year, bau_end_year){
   bau_tibble  <- NULL
   for(i in 1:nrow(calc_bau_arr(mmr_pivotwider_tibble, bau_start_year, bau_end_year))){
@@ -103,24 +107,24 @@ mmr_allcountries_projections <- function(mmr_pivotwider_tibble, bau_start_year, 
    
   return(mmrprojcountry2)
   
-  
 }
 
+#example
 mmr_allcountries_projections(mmr_est_unrounded_pwider, 2010, 2017)
 ```
 
 
 #SDG MMR Calculation, Categorization, and Adjustment
-#This function currently just calculates the BAU MMR of 2030
+#This function currently calculates the MMR of 2030 based on a global arr from a simple calculation
 - original parameters: mmr tibble, single year, global arr
 - UNHARDCODE the number 2015 and the column name; the 2010 and 2017 in calc_bau_arr() function call
 - SOLVE the issues w/ multiple tibbles and the resulting dependencies
-- BAU ARR FUNCTION STUFF - replace it somehow and/or fix the stuff in that function then apply changes here
 - returns: tibble w/ countries'observed arr, mmr projections during time period, 2030 projection, each country's MMR category, each country's adjusted SDG goal
 - Do we want this to simply add a column to the tibble passed thru asa an argument? Or just the calculated SDG MMR? Or maybe that plus the country codes/names? 
 
 ```{r}
-SDG_MMR_single_year <- function(mmr_pivotwider_tibble, year_to_calc_sdg, reference_year = 2015, global_arr) {
+#function
+SDG_MMR_2030 <- function(mmr_pivotwider_tibble, year_to_calc_sdg, reference_year = 2015, global_arr) {
   SDG_projection <- calc_bau_arr(mmr_pivotwider_tibble, 2010, 2017)$`2015` * exp(-global_arr * (year_to_calc_sdg - reference_year))
   MMR_SDG_projection <- cbind(mmr_allcountries_projections(mmr_pivotwider_tibble, 2010, 2017), SDG_projection)
   MMR_SDG_projection_categorized <- MMR_SDG_projection %>% 
@@ -131,7 +135,9 @@ SDG_MMR_single_year <- function(mmr_pivotwider_tibble, year_to_calc_sdg, referen
 
 global_arr <- mean(calc_bau_arr(mmr_est_unrounded_pwider, 2010, 2017)$`arr`)
 
-SDG_MMR_single_year(mmr_est_unrounded_pwider, 2030, 2015, global_arr)
+#example
+SDG_MMR_2030(mmr_est_unrounded_pwider, 2030, 2015, global_arr)
+
 ```
 
 #Get ARR SDG Target 
@@ -144,6 +150,7 @@ SDG_MMR_single_year(mmr_est_unrounded_pwider, 2030, 2015, global_arr)
 #Also, what does this return? Do we need to run this function multiple times
 #In general, need help understanding this function
 ```{r}
+#function
 get_arr_sdgtarget <- function(mmr_pivotwider_tibble,
   birth_projections_tibble, # vector with births for 2030 for all countries (countries need to be in same order as mmr2015_country)
   nproject  # number of years to project (2030 - 2015)
@@ -152,7 +159,7 @@ get_arr_sdgtarget <- function(mmr_pivotwider_tibble,
   births2030_country = select(birth_projections_tibble, `Births`)
   
   
-  optimize(squared_diff = 0.25, interval = c(-1,1),
+  optimize(squared_diff, interval = c(-1,1),
            mmr2015_country = mmr2015_country,
            births2030_country = births2030_country,
            nproject = nproject)
@@ -160,24 +167,66 @@ get_arr_sdgtarget <- function(mmr_pivotwider_tibble,
 
 #the squared_diff argument in optimize can take a dummy value for now, we'll calculate the actual value later using the squared_diff function 
 
+#example
 get_arr_sdgtarget(mmr_est_unrounded_pwider, live_birth_projections2030, 15)
 
+#debugging/fixing
 optimize(squared_diff, interval = c(-1,1),
-           mmr2015_country = select(mmr_est_unrounded_pwider, `2015`),
-           births2030_country = select(live_birth_projections2030, `Births`),
+           mmr2015_country =  select(SDG_MMR_2030(mmr_est_unrounded_pwider, year_to_calc_sdg = 2030, reference_year = 2015, global_arr), `SDG_projection`),
+           births2030_country = live_birth_projections2030 %>%
+           right_join(mmr_est_unrounded_pwider, by = c("name" = "name")) %>%
+           select(`Births`),
            nproject = 15)
 
+#optimize is working on sq_diff function, 
+#
 
+optimize(squared_diff, interval = c(-1,1),
+           mmr2015_country =  select(SDG_MMR_2030(mmr_est_unrounded_pwider, year_to_calc_sdg = 2030, reference_year = 2015, global_arr), `SDG_projection`),
+           births2030_country = live_birth_projections2030 %>%
+           right_join(mmr_est_unrounded_pwider, by = c("name" = "name")) %>%
+           select(`Births`),
+           nproject = 15)
+
+#temp function for debugging purposes
+  tm <- select(SDG_MMR_2030(mmr_est_unrounded_pwider, year_to_calc_sdg = 2030, reference_year = 2015, global_arr), `SDG_projection`)
+  tb <- live_birth_projections2030 %>%
+  right_join(mmr_est_unrounded_pwider, by = c("name" = "name")) %>%
+    select(`Births`)
+
+  
+  sd <- function(global_arr, mmr2015_country = tm,
+                         births2030_country = tb, nproject){
+  
+  mb1 <- filter(tm*tb, `SDG_projection`>100)
+  mb2 <- filter(tm*tb, `SDG_projection`<=100)
+  b1 <- filter(tb, `Births`>500)
+  b2 <- filter(tb, `Births`<=500)
+  mmr_global <- (sum(mb1) + sum(mb2)) / (sum(b1) + sum(b2)) 
+  (mmr_global - 70)^2
+
+}
+
+sd(global_arr, tm, tb, 15)
+
+##
+
+optimize(sd, interval = c(-1,1),
+           mmr2015_country = tm,
+           births2030_country = tb %>%
+           select(`Births`),
+           nproject = 15)
 
 ```
 
+#Squared Diff
+- for optimization purposes in conjunction w/ function above
 ```{r}
-#For optimization purposes in conjunction w/ function above
-
+#function
   squared_diff <- function(global_arr, mmr2015_country,
                          births2030_country, nproject){
   
-  testmmr <- select(SDG_MMR_single_year(mmr2015_country, year_to_calc_sdg = 2030, reference_year = 2015, global_arr), `SDG_projection`)
+  testmmr <- select(SDG_MMR_2030(mmr2015_country, year_to_calc_sdg = 2030, reference_year = 2015, global_arr), `SDG_projection`)
   testbirth <- births2030_country %>%
   right_join(mmr_est_unrounded_pwider, by = c("name" = "name")) %>%
     select(`Births`)
@@ -191,11 +240,15 @@ optimize(squared_diff, interval = c(-1,1),
 
 }
 
-  squared_diff(global_arr, mmr_est_unrounded_pwider,
-                         live_birth_projections2030, 15)
-  
-  
+#example
+squared_diff(global_arr, mmr_est_unrounded_pwider, 
+             live_birth_projections2030, 15)
 
+
+#attempt
+mmr2015 <- select(mmr_est_unrounded_pwider, `2015`)
+#squared_diff(global_arr, mmr2015, live_birth_projections2030, 15)
+  
 ```
 
 squared_diff <- function(global_arr, mmr_pivotwider_tibble,
@@ -205,7 +258,7 @@ squared_diff <- function(global_arr, mmr_pivotwider_tibble,
    births2030_country = birth_projections_tibble %>% right_join(mmr_pivotwider_tibble, by = c("name" = "name")) %>%
      select(`Births`)
 
-   mmr2030 <- select(SDG_MMR_single_year(mmr_pivotwider_tibble, year_to_calc_sdg = 2030, reference_year = 2015, global_arr), `SDG_projection`)
+   mmr2030 <- select(SDG_MMR_2030(mmr_pivotwider_tibble, year_to_calc_sdg = 2030, reference_year = 2015, global_arr), `SDG_projection`)
 
   mb_over100 <- filter(mmr2030*births2030_country, `2015`>100)
    mb_under100 <- filter(mmr2030*births2030_country, `2015`<=100)
@@ -246,7 +299,7 @@ get_sdgarr_country <- function(
 #(BAU) MMR Regional Summaries
 - original parameters: mmr tibble, countries/regions tibble, live birth tibble
 - UNHARDCODE specified years when they're the name of the columns
-- UNHARDCODE the stuff inside the summarize function if possible, ie see if a column name can vary so the general formula can written just once
+- UNHARDCODE the stuff inside the summarize function if possible, ie see if a column name can vary so the general formula can written just once (iterations?)
 - returns: summary table of mmr by year for different regions and globally for a specified time range
 
 #Consider making a version for this using SDG numbers
