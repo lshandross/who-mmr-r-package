@@ -7,7 +7,7 @@ output: html_notebook
 library(tidyr)
 library(tidyverse)
 library(readxl)
-library(dplyr) #maybe don't need
+#library(dplyr) #maybe don't need
 library(devtools)
 library(usethis)
 
@@ -187,14 +187,26 @@ optimize(squared_diff, interval = c(-1,1),
            right_join(mmr_est_unrounded_pwider, by = c("name" = "name")) %>%
            select(`Births`),
            nproject = 15)
+```
 
-#temp function for debugging purposes
+
+```{r}
+#temp functions for debugging purposes
+#the functions here will be renamed and likely made the actual functions that get used in the package
+
+SM2030 <- function(mmr_pivotwider_tibble, arr, years_to_project) {
+  sdg_beforefix140 <- mmr_pivotwider_tibble[[1]] * exp(-global_arr * (years_to_project))
+  return(sdg_beforefix140)
+}
+
+##
   tm <- select(SDG_MMR_2030(mmr_est_unrounded_pwider, year_to_calc_sdg = 2030, reference_year = 2015, global_arr), `SDG_projection`)
-  tb <- live_birth_projections2030 %>%
+  
+tb <- live_birth_projections2030 %>%
   right_join(mmr_est_unrounded_pwider, by = c("name" = "name")) %>%
     select(`Births`)
 
-  
+#this function takes in cleaned tibbles as arguments as first step towards using vectors as arguments  
   sd <- function(global_arr, mmr2015_country = tm,
                          births2030_country = tb, nproject){
   
@@ -209,13 +221,34 @@ optimize(squared_diff, interval = c(-1,1),
 
 sd(global_arr, tm, tb, 15)
 
-##
-
 optimize(sd, interval = c(-1,1),
            mmr2015_country = tm,
            births2030_country = tb %>%
            select(`Births`),
            nproject = 15)
+
+#this function is the fully realized function of using 
+sd2 <- function(global_arr, mmr2015_country,
+                         births2030_country = tb, nproject){
+  sdg_2030_prediction <- SM2030(mmr2015_country, global_arr, 15)
+  mb <- sdg_2030_prediction * tb
+  mb1 <- filter(mb, `Births` >1000)
+  mb2 <- filter(mb, `Births`<=1000)
+  b1 <- filter(tb, `Births`>500)
+  b2 <- filter(tb, `Births`<=500)
+  mmr_global <- (sum(mb1) + sum(mb2)) / (sum(b1) + sum(b2)) 
+  (mmr_global - 70)^2
+
+}
+
+gast <- function(mmr2015_country, births_2030country, nproject) {
+  optimize(sd2, interval = c(-1,1),
+           mmr2015_country = mmr2015_country,
+           births2030_country = births2030_country,
+           nproject = nproject)
+}
+
+gast(mmr2015, tb, 15)
 
 ```
 
@@ -243,6 +276,8 @@ optimize(sd, interval = c(-1,1),
 #example
 squared_diff(global_arr, mmr_est_unrounded_pwider, 
              live_birth_projections2030, 15)
+
+#alternatively use the sd2 function to be able to feed in a vector of the 2015 observed mmr into the function instead of the big mmr_pwider tibble
 
 
 #attempt

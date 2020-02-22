@@ -95,15 +95,24 @@ SDG MMR Calculation, Categorization, and Adjustment
 #function
 SM2030 <- function(mmr_pivotwider_tibble, arr, years_to_project) {
   sdg_beforefix140 <- mmr_pivotwider_tibble[[1]] * exp(-global_arr * (years_to_project))
- sdg_afterfix140 <- ifelse(sdg_beforefix140 >140, 140, sdg_beforefix140)
-  return(sdg_afterfix140)
+ #sdg_afterfix140 <- ifelse(sdg_beforefix140 >140, 140, sdg_beforefix140)
+  #return(sdg_afterfix140)
+  return(sdg_beforefix140)
 }
 
 global_arr <- mean(calc_bau_arr(mmr_est_unrounded_pwider, 2010, 2017)$`arr`)
 
 #example
 mmr2015 <- select(mmr_est_unrounded_pwider, `2015`)
+births2030 <- live_birth_projections2030 %>%
+  right_join(mmr_est_unrounded_pwider, by = c("name" = "name")) %>%
+    select(`Births`)
+births2030
+
 SM2030(mmr2015, global_arr, 15)
+select(SDG_MMR_2030(mmr_est_unrounded_pwider, 2030, 2015, global_arr), SDG_projection)
+
+
 
 ```
 
@@ -128,7 +137,7 @@ SM2030(mmr2015, global_arr, 15)
 
 }
 
-#example - FIXME
+#example - FIXME (now fixed in other R notebook)
 births2030 <- live_birth_projections2030 %>%
   right_join(mmr_est_unrounded_pwider, by = c("name" = "name")) %>%
     select(`Births`)
