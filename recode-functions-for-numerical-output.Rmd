@@ -8,7 +8,6 @@ output: html_notebook
 library(tidyr)
 library(tidyverse)
 library(readxl)
-#library(dplyr) #maybe don't need
 library(devtools)
 library(usethis)
 
@@ -143,4 +142,69 @@ births2030 <- live_birth_projections2030 %>%
     select(`Births`)
 sd(global_arr, mmr2015, births2030, 15)
   
+```
+
+
+#Recoded Functions (Copied from Braindump Notebook)
+```{r}
+#temp functions for debugging purposes
+#the functions here will be renamed and likely made the actual functions that get used in the package
+
+SM2030 <- function(mmr_pivotwider_tibble, arr, years_to_project) {
+  sdg_beforefix140 <- mmr_pivotwider_tibble[[1]] * exp(-global_arr * (years_to_project))
+  sdg_afterfix140 <- ifelse(sdg_beforefix140 >140, 140, sdg_beforefix140)
+  return(sdg_afterfix140)
+}
+
+##
+  tm <- select(SDG_MMR_2030(mmr_est_unrounded_pwider, year_to_calc_sdg = 2030, reference_year = 2015, global_arr), `new_SDG_projection`)
+  
+tb <- live_birth_projections2030 %>%
+  right_join(mmr_est_unrounded_pwider, by = c("name" = "name")) %>%
+    select(`Births`)
+
+#this function takes in cleaned tibbles as arguments as first step towards using vectors as arguments  
+  sd <- function(global_arr, mmr2015_country = tm,
+                         births2030_country = tb, nproject){
+  
+  mb1 <- filter(tm*tb, `new_SDG_projection`>100)
+  mb2 <- filter(tm*tb, `new_SDG_projection`<=100)
+  b1 <- filter(tb, `Births`>500)
+  b2 <- filter(tb, `Births`<=500)
+  mmr_global <- (sum(mb1) + sum(mb2)) / (sum(b1) + sum(b2)) 
+  (mmr_global - 70)^2
+
+}
+
+sd(global_arr, tm, tb, 15)
+
+optimize(sd, interval = c(-1,1),
+           mmr2015_country = tm,
+           births2030_country = tb %>%
+           select(`Births`),
+           nproject = 15)
+
+#this function is the fully realized function of using 
+sd2 <- function(global_arr, mmr2015_country,
+                         births2030_country = tb, nproject){
+  sdg_2030_prediction <- SM2030(mmr2015_country, global_arr, 15)
+  mb <- sdg_2030_prediction * tb
+  mb1 <- filter(mb, `Births` >1000)
+  mb2 <- filter(mb, `Births`<=1000)
+  b1 <- filter(tb, `Births`>500)
+  b2 <- filter(tb, `Births`<=500)
+  mmr_global <- (sum(mb1) + sum(mb2)) / (sum(b1) + sum(b2)) 
+  (mmr_global - 70)^2
+
+}
+
+gast <- function(mmr2015_country, births_2030country, nproject) {
+  optimize(sd2, interval = c(-1,1),
+           mmr2015_country = mmr2015_country,
+           births2030_country = births2030_country,
+           nproject = nproject)
+}
+
+gast(mmr2015, tb, 15)
+
 ```
