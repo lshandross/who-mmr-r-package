@@ -21,7 +21,8 @@ regional_groupings <- read.csv("regional_groupings_20190910_la_ac.csv")
 #Data Cleaning
 ```{r}
 country_info <- country_info %>%
-  select(`Code`, `ISO_Numeric_Code_CODE`, `Title`) 
+  select(`Code`, `ISO_Numeric_Code_CODE`, `Title`) %>%
+  rename(ISOCode = `Code`, ISONum = `ISO_Numeric_Code_CODE`)
   
 mmr_est_unrounded <- mmr_est_unrounded %>%
   filter(`bound` == "point", `year` >= 2010) %>%
@@ -36,8 +37,9 @@ regional_groupings <- regional_groupings %>%
   select(`ISOCode`, `Country.x`, `sdg_1`)
 
 live_birth_projections2030 <- live_birth_projections %>% 
-  filter(Year == 2030)
-colnames(live_birth_projections2030)[colnames(live_birth_projections2030) == "Location"] <- "name"
+  filter(Year == 2030) %>%
+  select(-c(`Year`))
+  rename(name = `Location`) 
 ```
 
 #Calc BAU ARR
@@ -83,7 +85,6 @@ mmr_country_projections(mmr_est_unrounded_pwider, 2016, 2030, 2010, 2017, iso_co
 #MMR Projections (all countries)
 - original parameters: mmr tibble, time1, time2
 - UNHARDCODE column names
-- FIX the weird t1, t2 parameters, eg the current ones are for arr rather than the sequence 
 - RENAME "col" and "namecountry2" to something more intuitive
 - returns: a single column tibble w/ all the projected MMRs
 - is there a way to remove the column numbers of the final tibble?
@@ -139,7 +140,9 @@ SDG_MMR_2030(mmr_est_unrounded_pwider, 2030, 2015, global_arr)
 
 
 ##Recoded Version
-mmr2015 <- select(mmr_est_unrounded_pwider, `2015`)
+mmr2015 <- mmr_est_unrounded_pwider %>% 
+  rename(MMR2015 = `2015`) %>%
+  select(`MMR2015`)
 
 SM2030 <- function(mmr2015_country, arr, years_to_project) {
   sdg_beforefix140 <- mmr2015_country[[1]] * exp(-global_arr * (years_to_project))
@@ -167,9 +170,9 @@ SM2030(mmr2015, global_arr, 15)
   
   mmr_births1 <- filter(testmmr*testbirth, `new_SDG_projection`>100)
   mmr_births2 <- filter(testmmr*testbirth, `new_SDG_projection`<=100)
-  b1 <- filter(testbirth, `Births`>500)
-  b2 <- filter(testbirth, `Births`<=500)
-  mmr_global <- (sum(mmr_births1) + sum(mmr_births2)) / (sum(b1) + sum(b2)) 
+  births1 <- filter(testbirth, `Births`>500)
+  births2 <- filter(testbirth, `Births`<=500)
+  mmr_global <- (sum(mmr_births1) + sum(mmr_births2)) / (sum(births1) + sum(births2)) 
   (mmr_global - 70)^2
 
 }
@@ -192,11 +195,11 @@ sd2 <- function(global_arr, mmr2015_country,
   right_join(mmr_est_unrounded_pwider, by = c("name" = "name")) %>%
     select(`Births`)
   
-  mmr_births <- sdg_2030_prediction * tb
+  mmr_births <- sdg_2030_prediction * testbirths
   mmr_births1 <- filter(mmr_births, `Births` >1000)
   mmr_births2 <- filter(mmr_births, `Births`<=1000)
-  births1 <- filter(tb, `Births`>500)
-  births2 <- filter(tb, `Births`<=500)
+  births1 <- filter(testbirths, `Births`>500)
+  births2 <- filter(testbirths, `Births`<=500)
   mmr_global <- (sum(mmr_births1) + sum(mmr_births2)) / (sum(births1) + sum(births2)) 
   (mmr_global - 70)^2
 
@@ -218,7 +221,7 @@ sd2(global_arr, mmr2015, live_birth_projections2030, 15)
 #In general, need help understanding this function
 #is this global? since the next get sdg arr target is country-specific
 ```{r}
-#function
+#function (BROKEN)
 get_arr_sdgtarget <- function(mmr_pivotwider_tibble,
   birth_projections_tibble, # vector with births for 2030 for all countries (countries need to be in same order as mmr2015_country)
   nproject  # number of years to project (2030 - 2015)
@@ -252,6 +255,23 @@ gast <- function(mmr2015_country, births_tibble, nproject) {
 gast(mmr2015, live_birth_projections2030, 15)
 
 #gives lots of warnings but still calcuates correctly (should we make this go back to what it was before w/ the data cleaning outside the sd2 function?)
+
+#What does this test do? Also it doesn't run for me
+# res <- gast(mmr2015_country = rep(70, 100),
+#   births2030_country = rep(10, 100),
+#   nproject = 10)
+# res$minimum
+
+# mmr2015x <- c(1000, 70)
+# births2030x <- c(1, 2)
+# nprojectx <- 2
+# 
+# resx <- get_arr_sdgtarget(mmr2015_country = mmr2015x,
+#                          births2030_country = births2030x,
+#                          nproject = nprojectx)
+# arr_sdgx <- resx$minimum
+# arr_sdgx # global arr
+
 ```
 
 
@@ -264,13 +284,27 @@ get_sdgarr_country <- function(
   # if you have this kind of function
   #  get_arr(mmr_start = mmr2015_country, mmr_end = mmr2030_country)
   -1/nproject*log(mmr2030_country/ mmr2015_country)
+  
 }
 
 arr_sdg <- gast(mmr2015, live_birth_projections2030, 15)
 
 get_sdgarr_country(mmr2015, arr_sdg, 15)
-
 #are the numbers I'm getting reasonable?
+
+mmr2030_country <- SM2030(mmr_est_unrounded_pwider, arr_sdg, 15)
+##
+arr_sdg_predictions <- get_sdgarr_country(mmr2015, arr_sdg, 15)
+mmr_est_unrounded_pwider %>% 
+  cbind(arr_sdg_predictions) %>%
+  rename(sdg_arr = `MMR2015`)
+
+arr_sdg_predictions
+#compare bau arr values
+mmr_allcountries_projections(mmr_est_unrounded_pwider, 2010, 2017)
+
+#Does this return correctly values? (B/c what about the adjustments to 140 that we made? Like, does this function know we're going from the original MMR to the adjusted one?)
+
 ```
 
 
@@ -284,13 +318,9 @@ get_sdgarr_country(mmr2015, arr_sdg, 15)
 
 ```{r}
 #some data cleaning
-colnames(country_info)[colnames(country_info)== "Code"] <- "ISOCode"
-
 countries_and_regions <- country_info %>% 
   left_join(regional_groupings, by = c("ISOCode" = "ISOCode")) %>%
-  select(-c(`Country.x`))
-
-colnames(countries_and_regions)[colnames(countries_and_regions)== "ISO_Numeric_Code_CODE"] <- "ISONum"
+  select(-c(`Country.x`)) 
 
 
 #function
@@ -316,6 +346,7 @@ mmr_regional_global_summarize <-
                 `MMR in 2030` = (sum(`2030`*`Births`))/(sum(`Births`))) %>%
       mutate(`sdg_1` = "Global") %>%
       select(`sdg_1`, `MMR in 2016`, `MMR in 2017`, `MMR in 2018`, `MMR in 2019`, `MMR in 2020`, `MMR in 2021`, `MMR in 2022`, `MMR in 2023`, `MMR in 2024`, `MMR in 2025`, `MMR in 2026`, `MMR in 2027`, `MMR in 2028`, `MMR in 2029`, `MMR in 2030`)
+    
     regional <- mmr_df %>%
       group_by(sdg_1) %>%
       summarise(`MMR in 2016` = (sum(`2016`*`Births`))/(sum(`Births`)),
@@ -340,4 +371,59 @@ mmr_regional_global_summarize <-
 mmr_regional_global_summarize(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030)
 ```
 
+#Recode of bau mmr summary function
+```{r}
+#function pt1 (global summaries only)
+mrgs_pt1 <-
+  function(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble){
+  mmr_df <- left_join(mmr_allcountries_projections(mmr_pivotwider_tibble, 2010, 2017) %>% select(-c(`name`, `arr`)), countries_regions_tibble, by = c("iso" = "ISOCode")) %>% left_join(birth_projections_tibble %>% select(`LocID`, `Births`), by = c("ISONum" = "LocID"))
+  
+nvars <- ncol(mmr_df) -  4
+global_mmrs <- rep(NA, nvars) 
+for (i in 2:nvars){ 
+  global_mmrs[i] <- (sum(mmr_df[,i] * mmr_df$Births)) / (sum(mmr_df$Births)) 
+  } 
+global <- na.omit(global_mmrs)
+global
+year <- c(2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030)
+gm <- data.frame(year, final)
+gm %>% 
+  pivot_wider(names_from = `year`, values_from = `final`) %>%
+      mutate(`sdg_1` = "Global")
+  }
+
+#example
+mrgs_pt1(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030)
+
+
+#FIXME
+#pt two of function in the works
+md <- left_join(mmr_allcountries_projections(mmr_est_unrounded_pwider, 2010, 2017) %>% select(-c(`name`, `arr`)), countries_and_regions, by = c("iso" = "ISOCode")) %>% left_join(live_birth_projections2030 %>% select(`LocID`, `Births`), by = c("ISONum" = "LocID"))  
+md <- group_by(md, sdg_1)
+nvars2 <- ncol(md) -  4
+regional_mmrs <- rep(NA, nvars2) 
+for (i in 2:nvars2){ 
+  regional_mmrs[i] <- (sum(md[,i] * md$Births)) / (sum(md$Births)) 
+  } 
+regional <- na.omit(regional_mmrs)
+regional
+year2 <- c(2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030)
+rm <- data.frame(year, regional)
+rm %>% 
+  pivot_wider(names_from = `year`, values_from = `regional`)
+
+n_iterations <- 8 #number of regions 
+for (i in 1:n_iterations) {
+  #filter(md, sdg_1 = "region1")
+  
+  nyears <- ncol(md) -  4
+  regional_mmrs <- rep(NA, nyears) 
+  for (j in 2:nyears){ 
+    regional_mmrs[j] <- (sum(md[,j] * md$Births)) / (sum(md$Births)) 
+    } 
+  regional <- na.omit(regional_mmrs)
+  regional
+}
+
+```
 
