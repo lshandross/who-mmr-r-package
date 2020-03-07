@@ -1,3 +1,13 @@
+#' Calculate MMR projections for all countries
+#'
+#' @param mmr_pivotwider_tibble A tibble that includes all countries' MMR
+#' @param bau_start_year A year to start BAU ARR calculation from
+#' @param bau_end_year A year to end BAU ARR calculation on
+#'
+#' @return The MMR projections for all countries for the specified year length
+#' @export
+#'
+#' @examples
 mmr_allcountries_projections <- function(mmr_pivotwider_tibble, bau_start_year, bau_end_year){
   bau_tibble  <- NULL
   for(i in 1:nrow(calc_bau_arr(mmr_pivotwider_tibble, bau_start_year, bau_end_year))){

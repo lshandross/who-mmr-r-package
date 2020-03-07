@@ -1,10 +1,10 @@
-#' Title
+#' Calculate MMR projections for all countries based on a chosen ARR 
 #'
 #' @param mmr2015_country A vector with MMR for 2015 for all countries
-#' @param arr
-#' @param years_to_project 
+#' @param arr A number (the ARR, intended to be the calculated SDG ARR)
+#' @param years_to_project Number of years to project
 #'
-#' @return
+#' @return The MMR projections based on a chosen ARR 
 #' @export
 #'
 #' @examples

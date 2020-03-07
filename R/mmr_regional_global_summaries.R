@@ -1,4 +1,4 @@
-#note that this is all hardcoded
+#note that this is all hardcoded and needs to be changed
 mmr_regional_global_summarize <-
   function(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble){
     mmr_df <- left_join(mmr_allcountries_projections(mmr_pivotwider_tibble, 2010, 2017), countries_regions_tibble, by = c("iso" = "ISOCode")) %>%

@@ -1,3 +1,16 @@
+#' Calculate MMR projections for a specified country
+#'
+#' @param mmr_pivotwider_tibble A tibble that includes all countries' MMR
+#' @param mmr_start_year A year to start MMR projections from
+#' @param mmr_end_year A year to end MMR projections on
+#' @param bau_start_year A year to start BAU ARR calculation from
+#' @param bau_end_year A year to end BAU ARR calculation on
+#' @param iso_code The ISO Code of a chosen country
+#'
+#' @return The MMR projections for the years specified for one chosen country
+#' @export
+#'
+#' @examples
 mmr_country_projections <- 
   function(mmr_pivotwider_tibble, mmr_start_year = 2016, mmr_end_year = 2030, bau_start_year = 2010, bau_end_year = 2017, iso_code){
     
