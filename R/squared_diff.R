@@ -11,7 +11,7 @@
 #' @examples
 squared_diff <- function(global_arr, mmr2015_country,
                 births_tibble, nproject){
-  sdg_2030_prediction <- get_mmr2030_sdg_projections(mmr2015_country, global_arr, 15)
+  sdg_2030_prediction <- get_mmr2030_sdg_projections(mmr2015_country, global_arr)
   testbirths <- live_birth_projections2030 %>%
     right_join(mmr_est_unrounded_pwider, by = c("name" = "name")) %>%
     select(`Births`)

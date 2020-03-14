@@ -13,3 +13,13 @@ calc_bau_arr <- function(mmr_pivotwider_tibble, start_year, end_year) {
   arr = (-1/(length_years))*log(mmr_pivotwider_tibble[["2017"]]/mmr_pivotwider_tibble$`2010`)
   return(cbind(mmr_pivotwider_tibble, arr))
 }
+
+
+#recoded
+cba <- function(mmr_pivotwider_tibble) {
+  start_year = 2010
+  end_year = 2017
+  length_years = end_year - start_year 
+  arr = (-1/(length_years))*log(mmr_pivotwider_tibble[["2017"]]/mmr_pivotwider_tibble$`2010`)
+  return(cbind(select(mmr_pivotwider_tibble, `iso`), arr))
+}

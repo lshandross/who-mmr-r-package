@@ -47,12 +47,19 @@ live_birth_projections2030 <- live_birth_projections %>%
 ```
 
 #Calc BAU ARR
-- original parameters: mmr tibble, time1, time2
+- original parameters: mmr tibble
 - UN-HARDCODE specified years when they're the name of the columns
 - returns: tibble w/ added observed ARR for specified time period
 
 ```{r}
 calc_bau_arr(mmr_est_unrounded_pwider, 2010, 2017)
+
+#new function only has bau arr and iso code columns
+cba(mmr_est_unrounded_pwider)
+
+
+#Question:
+# the function considers the length of the time period to be 7 years but it's actually 8 years b/c we're counting 2010 in the period
 ```
 
 
@@ -63,6 +70,10 @@ calc_bau_arr(mmr_est_unrounded_pwider, 2010, 2017)
 
 ```{r}
 mmr_country_projections(mmr_est_unrounded_pwider, 2016, 2030, 2010, 2017, iso_code = "AFG")
+    
+#Recoded
+mcp(mmr_est_unrounded_pwider, "AFG")
+
 ```
 
 #MMR Projections (all countries)
@@ -74,6 +85,10 @@ mmr_country_projections(mmr_est_unrounded_pwider, 2016, 2030, 2010, 2017, iso_co
 
 ```{r}
 mmr_allcountries_projections(mmr_est_unrounded_pwider, 2010, 2017)
+
+#new function does not have arr column
+macp(mmr_est_unrounded_pwider)
+
 ```
 
 #SDG MMR Calculation, Categorization, and Adjustment
@@ -85,13 +100,16 @@ mmr_allcountries_projections(mmr_est_unrounded_pwider, 2010, 2017)
 - Do we want this to simply add a column to the tibble passed thru asa an argument? Or just the calculated SDG MMR? Or maybe that plus the country codes/names? 
 
 ```{r}
-global_arr <- mean(calc_bau_arr(mmr_est_unrounded_pwider, 2010, 2017)$`arr`)
+global_arr <- mean(cba(mmr_est_unrounded_pwider)$`arr`)
 
 mmr2015 <- mmr_est_unrounded_pwider %>% 
   rename(MMR2015 = `2015`) %>%
   select(`MMR2015`)
 
-get_mmr2030_sdg_projections(mmr2015, global_arr, 15)
+get_mmr2030_sdg_projections(mmr2015, global_arr)
+
+##
+
 ```
 
 #Squared Diff
@@ -122,9 +140,9 @@ get_arr_sdg_target_country(mmr2015, arr_sdg, 15)
 #Other checks
 #are the numbers I'm getting reasonable?
 
-mmr2030_country <- SM2030(mmr_est_unrounded_pwider, arr_sdg, 15)
+mmr2030_country <- get_mmr2030_sdg_projections(mmr_est_unrounded_pwider, arr_sdg)
 ##
-arr_sdg_predictions <- get_sdgarr_country(mmr2015, arr_sdg, 15)
+arr_sdg_predictions <- get_arr_sdg_target_country(mmr2015, arr_sdg, 15)
 mmr_est_unrounded_pwider %>% 
   cbind(arr_sdg_predictions) %>%
   rename(sdg_arr = `MMR2015`)
@@ -134,6 +152,11 @@ arr_sdg_predictions
 mmr_allcountries_projections(mmr_est_unrounded_pwider, 2010, 2017)
 
 #Does this return correctly values? (B/c what about the adjustments to 140 that we made? Like, does this function know we're going from the original MMR to the adjusted one?)
+
+
+get_mmr2030_sdg_projections(mmr2015, global_arr) %>% 
+  cbind(get_mmr2030_sdg_projections(mmr2015, arr_sdg_predictions)) %>%
+  rename(sdg_arr = `get_mmr2030_sdg_projctions(mmr2015, arr_sdg_predictions)`)
 
 ```
 
@@ -169,43 +192,85 @@ for (i in 2:nvars){
 
 global <- na.omit(global_mmrs)
 global
-year <- c(2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030)
-gm <- data.frame(year, global)
+start_year = 2016
+end_year = 2030
+nyears <- end_year - start_year +1
+years <- seq(start_year, end_year)
+gm <- data.frame(years, global)
 gm %>% 
-  pivot_wider(names_from = `year`, values_from = `global`) %>%
-      mutate(`sdg_1` = "Global")
+  pivot_wider(names_from = `years`, values_from = `global`) %>%
+      mutate(`sdg_1` = "Global") %>%
+    select(c(16, seq(1, 15)))
   }
 
 #example
 mrgs_pt1(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030)
 
-#FIXME
-#pt two of function in the works
-md <- left_join(mmr_allcountries_projections(mmr_est_unrounded_pwider, 2010, 2017) %>% select(-c(`name`, `arr`)), countries_and_regions, by = c("iso" = "ISOCode")) %>% left_join(live_birth_projections2030 %>% select(`LocID`, `Births`), by = c("ISONum" = "LocID"))  
-md <- group_by(md, sdg_1)
-nvars2 <- ncol(md) -  4
-regional_mmrs <- rep(NA, nvars2) 
-for (i in 2:nvars2){ 
-  regional_mmrs[i] <- (sum(md[,i] * md$Births)) / (sum(md$Births)) 
-  } 
-regional <- na.omit(regional_mmrs)
-regional
-year2 <- c(2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030)
-rm <- data.frame(year, regional)
-rm %>% 
-  pivot_wider(names_from = `year`, values_from = `regional`)
+# #pt two of function in the works
 
-n_iterations <- 8 #number of regions 
-for (i in 1:n_iterations) {
-  #filter(md, sdg_1 = "region1")
-  
-  nyears <- ncol(md) -  4
-  regional_mmrs <- rep(NA, nyears) 
-  for (j in 2:nyears){ 
-    regional_mmrs[j] <- (sum(md[,j] * md$Births)) / (sum(md$Births)) 
-    } 
-  regional <- na.omit(regional_mmrs)
-  regional
+md <- left_join(mmr_allcountries_projections(mmr_est_unrounded_pwider, 2010, 2017) %>% select(-c(`name`, `arr`)), countries_and_regions, by = c("iso" = "ISOCode")) %>% left_join(live_birth_projections2030 %>% select(`LocID`, `Births`), by = c("ISONum" = "LocID")) 
+
+mrgs_regions <- function(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble, sdg1_region) {
+  #note that region must be in quotes
+md_region <- filter(md, sdg_1 == sdg1_region)
+
+nvars <- ncol(md_region) -  4
+region_mmrs <- rep(NA, nvars) 
+for (i in 2:nvars){ 
+  region_mmrs[i] <- (sum(md_region[,i] * md_region$Births)) / (sum(md_region$Births)) 
+} 
+
+region_mmrs <- na.omit(region_mmrs)
+region_mmrs
+start_year = 2016
+end_year = 2030
+nyears <- end_year - start_year + 1
+year <- seq(start_year, end_year)
+region <- data.frame(year, region_mmrs)
+region %>% 
+  pivot_wider(names_from = `year`, values_from = `region_mmrs`) %>%
+      mutate(`sdg_1` = sdg1_region) %>%
+    select(c(16, seq(1, 15)))
 }
+
+
+##
+region <- c() #what does this do? note the use of "region" above
+
+region[1] <- "Australia and New Zealand"	
+region[2] <- "Central Asia and Southern Asia"	
+region[3] <- "Eastern Asia and South-eastern Asia"	
+region[4] <- "Latin America and the Caribbean"	
+region[5] <- "Northern America and Europe"	
+region[6] <- "Oceania / Oceania excluding Australia and New Zealand"
+region[7] <- "Sub-Saharan Africa"	
+region[8] <- "Western Asia and Northern Africa"
+region[9] <- "Global"
+yr <- seq(2016, 2030)
+st_tempcol2 <- rep(NA, 15)
+summarytibble <- data.frame(yr, st_tempcol2) %>% 
+  pivot_wider(names_from = `yr`, values_from = `st_tempcol2`) %>%
+  mutate(sdg_1 = "Region")
+
+
+Global = mrgs_pt1(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030) 
+       ANZ = mrgs_regions(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030, region[1])
+        CASA = mrgs_regions(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030, region[2])
+       EASA = mrgs_regions(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030, region[3])
+       LAC = mrgs_regions(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030, region[4])
+       NAE = mrgs_regions(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030, region[5])
+       OOeANZ = mrgs_regions(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030, region[6])
+       SSA = mrgs_regions(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030, region[7])
+       WANA = mrgs_regions(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030, region[8])
+
+region_projections <- list(Global, ANZ, CASA, EASA, LAC, NAE, OOeANZ, 
+                           SSA, WANA)
+
+
+summary_table <- do.call(rbind, region_projections)
+rename(summary_table, region = "sdg_1")
+summary_table
+
+#we need to pivotwider last b/c first we'll make the mmr summary results into columns to use a for loop
 
 ```
