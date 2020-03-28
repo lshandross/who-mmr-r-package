@@ -43,6 +43,7 @@ bau_mmr_regional_projection_summaries <- function(mmr_pivotwider_tibble, countri
 #' @examples
 global_mmr_summary <-
   function(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble){
+    # cna you avoid hardcoding here?
     mmr_df <- left_join(mmr_allcountries_projections(mmr_pivotwider_tibble, 2010, 2017) %>% select(-c(`name`, `arr`)), countries_regions_tibble, by = c("iso" = "ISOCode")) %>% left_join(birth_projections_tibble %>% select(`LocID`, `Births`), by = c("ISONum" = "LocID"))
     
     nvars <- ncol(mmr_df) -  4
@@ -53,6 +54,7 @@ global_mmr_summary <-
     
     global <- na.omit(global_mmrs)
     global
+    # and here
     start_year = 2016
     end_year = 2030
     nyears <- end_year - start_year +1
@@ -61,6 +63,7 @@ global_mmr_summary <-
     gm %>% 
       pivot_wider(names_from = `years`, values_from = `global`) %>%
       mutate(`sdg_1` = "Global") %>%
+    # this is dangerous coding too!
       select(c(16, seq(1, 15)))
   }
 
@@ -88,6 +91,7 @@ regional_mmr_summary <- function(mmr_pivotwider_tibble, countries_regions_tibble
   
   region_mmrs <- na.omit(region_mmrs)
   region_mmrs
+  # same
   start_year = 2016
   end_year = 2030
   nyears <- end_year - start_year + 1
