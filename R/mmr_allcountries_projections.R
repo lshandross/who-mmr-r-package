@@ -14,6 +14,7 @@ mmr_allcountries_projections <- function(mmr_pivotwider_tibble, bau_start_year, 
     col <- mmr_country_projections(mmr_pivotwider_tibble, iso_code = calc_bau_arr(mmr_pivotwider_tibble, bau_start_year, bau_end_year)$iso[i])
     bau_tibble <- rbind(bau_tibble, col)
     colnames(bau_tibble) <- c("2016", "2017", "2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025", "2026", "2027", "2028", "2029", "2030")
+    # can you fix this need for hardcoding?
   }
   
   namecountry2 <- select(calc_bau_arr(mmr_pivotwider_tibble, bau_start_year, bau_end_year), "iso" , "name", "arr")
@@ -24,6 +25,7 @@ mmr_allcountries_projections <- function(mmr_pivotwider_tibble, bau_start_year, 
 }
 
 #Recoded version
+# is function below still used? if so... needs to be updated, ie no harcoing of years inside, and no indep def of years and start/end
 macp <- function(mmr_pivotwider_tibble) {
   start_year = 2016
   end_year = 2030
