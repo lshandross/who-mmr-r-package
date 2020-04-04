@@ -1,3 +1,5 @@
+# can you generalize this function to work for any year_to_roject > 0?
+
 #' Calculate MMR projections for all countries based on a chosen ARR 
 #'
 #' @param mmr2015_country A vector with MMR for 2015 for all countries
