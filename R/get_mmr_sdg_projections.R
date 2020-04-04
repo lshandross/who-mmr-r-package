@@ -2,15 +2,14 @@
 #'
 #' @param mmr2015_country A vector with MMR for 2015 for all countries
 #' @param arr A number (the ARR, intended to be the calculated SDG ARR)
-#' @param years_to_project Number of years to project
+#' @param nproject Number of years to project
 #'
 #' @return The MMR projections based on a chosen ARR 
 #' @export
 #'
 #' @examples
-get_mmr2030_sdg_projections <- function(mmr2015_country, arr) {
-  years_to_project = 15
-  sdg_beforefix140 <- mmr2015_country[[1]] * exp(-global_arr * (years_to_project))
+get_mmr_sdg_projections <- function(mmr2015_country, arr, nproject) {
+  sdg_beforefix140 <- mmr2015_country[[1]] * exp(-arr * (nproject))
   sdg_afterfix140 <- ifelse(sdg_beforefix140 >140, 140, sdg_beforefix140)
   return(sdg_afterfix140)
 }

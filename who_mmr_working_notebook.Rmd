@@ -72,7 +72,7 @@ cba(mmr_est_unrounded_pwider)
 mmr_country_projections(mmr_est_unrounded_pwider, 2016, 2030, 2010, 2017, iso_code = "AFG")
     
 #Recoded
-mcp(mmr_est_unrounded_pwider, "AFG")
+mcp(mmr_est_unrounded_pwider, "AFG", 2016, 2030)
 
 ```
 
@@ -87,8 +87,7 @@ mcp(mmr_est_unrounded_pwider, "AFG")
 mmr_allcountries_projections(mmr_est_unrounded_pwider, 2010, 2017)
 
 #new function does not have arr column
-macp(mmr_est_unrounded_pwider)
-
+macp(mmr_est_unrounded_pwider, 2016, 2030)
 ```
 
 #SDG MMR Calculation, Categorization, and Adjustment
@@ -106,9 +105,7 @@ mmr2015 <- mmr_est_unrounded_pwider %>%
   rename(MMR2015 = `2015`) %>%
   select(`MMR2015`)
 
-get_mmr2030_sdg_projections(mmr2015, global_arr)
-
-##
+get_mmr2030_sdg_projections(mmr2015, global_arr, 15)
 
 ```
 
@@ -130,6 +127,7 @@ squared_diff(global_arr, mmr2015, live_birth_projections2030, 15)
 #is this global? since the next get sdg arr target is country-specific
 ```{r}
 get_arr_sdg_target(mmr2015, live_birth_projections2030, 15)
+arr_sdg <- 0.05603232
 ```
 
 #Calculate SDG ARR for each country Based on SDG MMR 
@@ -140,7 +138,7 @@ get_arr_sdg_target_country(mmr2015, arr_sdg, 15)
 #Other checks
 #are the numbers I'm getting reasonable?
 
-mmr2030_country <- get_mmr2030_sdg_projections(mmr_est_unrounded_pwider, arr_sdg)
+mmr2030_country <- get_mmr2030_sdg_projections(mmr_est_unrounded_pwider, arr_sdg, 15)
 ##
 arr_sdg_predictions <- get_arr_sdg_target_country(mmr2015, arr_sdg, 15)
 mmr_est_unrounded_pwider %>% 
@@ -154,16 +152,14 @@ mmr_allcountries_projections(mmr_est_unrounded_pwider, 2010, 2017)
 #Does this return correctly values? (B/c what about the adjustments to 140 that we made? Like, does this function know we're going from the original MMR to the adjusted one?)
 
 
-get_mmr2030_sdg_projections(mmr2015, global_arr) %>% 
-  cbind(get_mmr2030_sdg_projections(mmr2015, arr_sdg_predictions)) 
+get_mmr2030_sdg_projections(mmr2015, global_arr, 15) %>% 
+  cbind(get_mmr2030_sdg_projections(mmr2015, arr_sdg_predictions, 15)) 
 #%>% rename(sdg_arr = `get_mmr2030_sdg_projctions(mmr2015, arr_sdg_predictions)`)
 
 ```
 
 #(BAU) MMR Regional Summaries
 - original parameters: mmr tibble, countries/regions tibble, live birth tibble
-- UNHARDCODE specified years when they're the name of the columns
-- UNHARDCODE the stuff inside the summarize function if possible, ie see if a column name can vary so the general formula can written just once (iterations?)
 - returns: summary table of mmr by year for different regions and globally for a specified time range
 
 #Consider making a version for this using SDG numbers
@@ -183,6 +179,29 @@ mmr_regional_global_summarize(mmr_est_unrounded_pwider, countries_and_regions, l
 md <- left_join(mmr_allcountries_projections(mmr_est_unrounded_pwider, 2010, 2017) %>% select(-c(`name`, `arr`)), countries_and_regions, by = c("iso" = "ISOCode")) %>% left_join(live_birth_projections2030 %>% select(`LocID`, `Births`), by = c("ISONum" = "LocID")) 
 
 #example
-bau_mmr_regional_projection_summaries(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030)
+bau_mmr_regional_projection_summaries(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030, 2010, 2017, 2016, 2030)
+```
+
+#Various tests
+```{r}
+#does the calculated sdg arr lead to a global mmr of 70?
+
+  #Global MMR using SDG ARR (avg of all countries)
+  (sum(get_mmr2030_sdg_projections(mmr2015, sum(arr_sdg_predictions) / 185, 15) * md$Births)) / (sum(md$Births)) #68.754
+
+  #Global MMR using BAU ARR (avg of all countries)
+  bau_mmr_proj <- mmr_est_unrounded_pwider$`2015` * exp(-(rep(0.0273, 185)) * (2030-2015))
+   (sum(bau_mmr_proj * md$Births)) / (sum(md$Births)) #166.529
+
+  
+  #Global MMR using ARR = 2.9%
+  bau_mmr_proj2 <- mmr_est_unrounded_pwider$`2015` * exp(-(rep(0.029, 185)) * (2030-2015))
+  (sum(bau_mmr_proj2 * md$Births)) / (sum(md$Births)) #162.336
+
+  
+#
+(sum(get_mmr2030_sdg_projections(mmr2015, 0.04, 15) * md$Births)) / (sum(md$Births)) #80.325
+
+
 ```
 

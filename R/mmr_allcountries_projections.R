@@ -24,15 +24,13 @@ mmr_allcountries_projections <- function(mmr_pivotwider_tibble, bau_start_year, 
 }
 
 #Recoded version
-macp <- function(mmr_pivotwider_tibble) {
-  start_year = 2016
-  end_year = 2030
-  nyears <- end_year - start_year +1
+macp <- function(mmr_pivotwider_tibble, mmr_start_year, mmr_end_year) {
+  nyears <- mmr_end_year - mmr_start_year +1
   years <- seq(2016, 2030)
   
   bau_tibble  <- NULL
   for(i in 1:nrow(cba(mmr_est_unrounded_pwider))){
-    col <- mcp(mmr_est_unrounded_pwider, iso_code = cba(mmr_est_unrounded_pwider)$iso[i])
+    col <- mcp(mmr_est_unrounded_pwider, iso_code = cba(mmr_est_unrounded_pwider)$iso[i], mmr_start_year, mmr_end_year)
     bau_tibble <- rbind(bau_tibble, col)
     colnames(bau_tibble) <- years
   }

@@ -208,3 +208,58 @@ gast <- function(mmr2015_country, births_2030country, nproject) {
 gast(mmr2015, tb, 15)
 
 ```
+
+
+```{r}
+#function pt1
+mrgs_pt1 <-
+  function(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble){
+  mmr_df <- left_join(mmr_allcountries_projections(mmr_pivotwider_tibble, 2010, 2017) %>% select(-c(`name`, `arr`)), countries_regions_tibble, by = c("iso" = "ISOCode")) %>% left_join(birth_projections_tibble %>% select(`LocID`, `Births`), by = c("ISONum" = "LocID"))
+  
+nvars <- ncol(mmr_df) -  4
+global_mmrs <- rep(NA, nvars) 
+for (i in 2:nvars){ 
+  global_mmrs[i] <- (sum(mmr_df[,i] * mmr_df$Births)) / (sum(mmr_df$Births)) 
+  } 
+global <- na.omit(global_mmrs)
+global
+year <- c(2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030)
+gm <- data.frame(year, final)
+gm %>% 
+  pivot_wider(names_from = `year`, values_from = `final`) %>%
+      mutate(`sdg_1` = "Global")
+  }
+
+#test
+mrgs_pt1(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030)
+  
+
+
+md <- left_join(mmr_allcountries_projections(mmr_est_unrounded_pwider, 2010, 2017) %>% select(-c(`name`, `arr`)), countries_and_regions, by = c("iso" = "ISOCode")) %>% left_join(live_birth_projections2030 %>% select(`LocID`, `Births`), by = c("ISONum" = "LocID"))  
+md <- group_by(md, sdg_1)
+nvars2 <- ncol(md) -  4
+regional_mmrs <- rep(NA, nvars2) 
+for (i in 2:nvars2){ 
+  regional_mmrs[i] <- (sum(md[,i] * md$Births)) / (sum(md$Births)) 
+  } 
+regional <- na.omit(regional_mmrs)
+regional
+year2 <- c(2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028, 2029, 2030)
+rm <- data.frame(year, regional)
+rm %>% 
+  pivot_wider(names_from = `year`, values_from = `regional`)
+
+n_iterations <- 8 #number of regions 
+for (i in 1:n_iterations) {
+  #filter(md, sdg_1 = "region1")
+  
+  nyears <- ncol(md) -  4
+  regional_mmrs <- rep(NA, nyears) 
+  for (j in 2:nyears){ 
+    regional_mmrs[j] <- (sum(md[,j] * md$Births)) / (sum(md$Births)) 
+    } 
+  regional <- na.omit(regional_mmrs)
+  regional
+}
+```
+

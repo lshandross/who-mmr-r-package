@@ -24,17 +24,13 @@ mmr_country_projections <-
   }
 
 #Recoded version
-mcp <- function(mmr_pivotwider_tibble, iso_code){
-  mmr_start_year = 2016
-  mmr_end_year = 2030
-  # bau_start_year = 2010
-  # bau_end_year = 2017
+mcp <- function(mmr_pivotwider_tibble, iso_code, mmr_start_year, mmr_end_year){
   years <- seq(mmr_start_year, mmr_end_year)
   num_years <- length(years)
   
   bau_tibble <- left_join(mmr_pivotwider_tibble, cba(mmr_pivotwider_tibble), by = "iso") %>% 
     filter(iso == iso_code)
-  projection <- rep(NA,num_years) #What does this do?
+  projection <- rep(NA,num_years)
   projection <- bau_tibble$`2015` * exp(-(bau_tibble$`arr`) * (years-2015))
   return(projection)
 }
