@@ -50,16 +50,8 @@ bau_mmr_regional_projection_summaries <- function(mmr_pivotwider_tibble, countri
 #'
 #' @examples
 global_mmr_summary <-
-<<<<<<< HEAD
   function(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble, arr_start_year, arr_end_year, proj_start_year, proj_end_year){
-    mmr_df <- left_join(mmr_allcountries_projections(mmr_pivotwider_tibble, arr_start_year, arr_end_year) %>% select(-c(`name`, `arr`)), 
-                        countries_regions_tibble, 
-                        by = c("iso" = "ISOCode")) %>% left_join(birth_projections_tibble %>% select(`LocID`, `Births`), by = c("ISONum" = "LocID"))
-=======
-  function(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble){
-    # cna you avoid hardcoding here?
-    mmr_df <- left_join(mmr_allcountries_projections(mmr_pivotwider_tibble, 2010, 2017) %>% select(-c(`name`, `arr`)), countries_regions_tibble, by = c("iso" = "ISOCode")) %>% left_join(birth_projections_tibble %>% select(`LocID`, `Births`), by = c("ISONum" = "LocID"))
->>>>>>> 6cd3f93ae87a623c832463ef01a359e2cd651dd0
+    mmr_df <- left_join(mmr_allcountries_projections(mmr_pivotwider_tibble, arr_start_year, arr_end_year, proj_start_year, proj_end_year) %>% select(-c(`name`, `arr`)), countries_regions_tibble, by = c("iso" = "ISOCode")) %>% left_join(birth_projections_tibble %>% select(`LocID`, `Births`), by = c("ISONum" = "LocID"))
     
     nvars <- ncol(mmr_df) -  4
     global_mmrs <- rep(NA, nvars) 
@@ -69,27 +61,13 @@ global_mmr_summary <-
     
     global <- na.omit(global_mmrs)
     global
-<<<<<<< HEAD
     nyears <- proj_end_year - proj_start_year + 1
     years <- seq(proj_start_year, proj_end_year)
-    global_mmr <- data.frame(years, global)
-    global_mmr %>% 
-      pivot_wider(names_from = `years`, values_from = `global`) %>%
-      mutate(`sdg_1` = "Global") %>%
-      select(c(sdg_1, 1:nyears))
-=======
-    # and here
-    start_year = 2016
-    end_year = 2030
-    nyears <- end_year - start_year +1
-    years <- seq(start_year, end_year)
     gm <- data.frame(years, global)
     gm %>% 
       pivot_wider(names_from = `years`, values_from = `global`) %>%
       mutate(`sdg_1` = "Global") %>%
-    # this is dangerous coding too!
-      select(c(16, seq(1, 15)))
->>>>>>> 6cd3f93ae87a623c832463ef01a359e2cd651dd0
+      select(c(sdg_1, 1:nyears))
   }
 
 
@@ -118,24 +96,34 @@ regional_mmr_summary <- function(mmr_pivotwider_tibble, countries_regions_tibble
   
   region_mmrs <- na.omit(region_mmrs)
   region_mmrs
-<<<<<<< HEAD
   nyears <- proj_end_year - proj_start_year + 1
   year <- seq(proj_start_year, proj_end_year)
-=======
-  # same
-  start_year = 2016
-  end_year = 2030
-  nyears <- end_year - start_year + 1
-  year <- seq(start_year, end_year)
->>>>>>> 6cd3f93ae87a623c832463ef01a359e2cd651dd0
   region <- data.frame(year, region_mmrs)
   region %>% 
     pivot_wider(names_from = `year`, values_from = `region_mmrs`) %>%
     mutate(`sdg_1` = sdg1_region) %>%
-<<<<<<< HEAD
     select(c(sdg_1, 1:nyears))
 }
-=======
-    select(c(16, seq(1, 15)))
+
+
+
+#' Get Graph of Regional MMR Projections between 2016 and 2030
+#'
+#' @param mmr_pivotwider_tibble A tibble that contains all countries' MMR in the pivotwider format
+#' @param countries_regions_tibble A tibble that lists all countries and the region they belong to 
+#' @param birth_projections_tibble A tibble with the births by country for 2030
+#' @param arr_start_year A year to begin the arr calculation from
+#' @param arr_start_year A year to end the arr calculation with
+#' @param proj_start_year A year to begin the summary projections from
+#' @param proj_start_year A year to end the summary projections with
+#'
+#' @return Line graph summarizing regional and global MMR projections for a specified time period
+#' @export
+#'
+#' @examples
+bau_mmr_regional_global_graph <- function(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble, arr_start_year, arr_end_year, proj_start_year, proj_end_year) {
+  bau_mmr_regional_projection_summaries(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030, arr_start_year, arr_end_year, proj_start_year, proj_end_year) %>%
+    pivot_longer(2:(proj_end_year - proj_start_year + 1), names_to = "period",values_to = "mmr") %>%
+    ggplot() + geom_point(aes(x = period,y = mmr, color = sdg_1)) +
+    geom_line(mapping = aes(x = period, y = mmr, group = sdg_1, color = sdg_1))
 }
->>>>>>> 6cd3f93ae87a623c832463ef01a359e2cd651dd0

@@ -9,9 +9,9 @@
 #'
 #' @examples
 get_arr_sdg_target_country <- function(mmr2015_country, arr_sdg, nproject){
-  mmr2030_country <- get_mmr2030_sdg_projections(mmr2015_country, arr_sdg, nproject)
+  mmr_yr_n_country <- get_mmr_sdg_projections(mmr2015_country, arr_sdg, nproject)
   # if you have this kind of function
-  #  get_arr(mmr_start = mmr2015_country, mmr_end = mmr2030_country)
-  -1/nproject*log(mmr2030_country/ mmr2015_country)
+  #  get_arr(mmr_start = mmr2015_country, mmr_end = mmr_yr_n_country)
+  -1/nproject*log(mmr_yr_n_country/ mmr2015_country)
   
 }

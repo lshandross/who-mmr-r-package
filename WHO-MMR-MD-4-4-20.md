@@ -10,14 +10,14 @@ library(tidyr)
 library(tidyverse)
 ```
 
-    ## -- Attaching packages ------------------------------------------------------------ tidyverse 1.2.1 --
+    ## -- Attaching packages --------------------------------------- tidyverse 1.2.1 --
 
     ## v ggplot2 3.2.1     v purrr   0.3.2
     ## v tibble  2.1.3     v dplyr   0.8.3
     ## v readr   1.3.1     v stringr 1.4.0
     ## v ggplot2 3.2.1     v forcats 0.4.0
 
-    ## -- Conflicts --------------------------------------------------------------- tidyverse_conflicts() --
+    ## -- Conflicts ------------------------------------------ tidyverse_conflicts() --
     ## x dplyr::filter() masks stats::filter()
     ## x dplyr::lag()    masks stats::lag()
 
@@ -513,7 +513,7 @@ mcp(mmr_est_unrounded_pwider, "AFG", 2016, 2030)
 countries)
 
 ``` r
-mmr_allcountries_proj_tibble <- mmr_allcountries_projections(mmr_est_unrounded_pwider, 2010, 2017)
+mmr_allcountries_proj_tibble <- mmr_allcountries_projections(mmr_est_unrounded_pwider, 2010, 2017, 2016, 2030)
 knitr::kable(mmr_allcountries_proj_tibble)
 ```
 
@@ -1410,7 +1410,7 @@ knitr::kable(mmr_regional_global_summaries)
 
 #data cleaning
 #mmr, countries and regions, live births combined tibble
-md <- left_join(mmr_allcountries_projections(mmr_est_unrounded_pwider, 2010, 2017) %>% select(-c(`name`, `arr`)), countries_and_regions, by = c("iso" = "ISOCode")) %>% left_join(live_birth_projections2030 %>% select(`LocID`, `Births`), by = c("ISONum" = "LocID")) 
+md <- left_join(mmr_allcountries_projections(mmr_est_unrounded_pwider, 2010, 2017, 2016, 2030) %>% select(-c(`name`, `arr`)), countries_and_regions, by = c("iso" = "ISOCode")) %>% left_join(live_birth_projections2030 %>% select(`LocID`, `Births`), by = c("ISONum" = "LocID")) 
 ```
 
     ## Warning: Column `iso`/`ISOCode` joining factor and character vector,
@@ -1439,6 +1439,16 @@ knitr::kable(regional_proj_summaries)
 | Oceania / Oceania excluding Australia and New Zealand | 133.088692 | 130.086088 | 127.155523 | 124.295103 | 121.502993 | 118.777409 | 116.116619 | 113.518944 | 110.982752 | 108.506457 | 106.088521 | 103.727448 | 101.421787 |  99.170126 |  96.971095 |
 | Sub-Saharan Africa                                    | 557.115234 | 544.861528 | 533.001751 | 521.520237 | 510.402020 | 499.632809 | 489.198953 | 479.087407 | 469.285708 | 459.781944 | 450.564728 | 441.623174 | 432.946872 | 424.525867 | 416.350636 |
 | Western Asia and Northern Africa                      |  93.611651 |  91.049495 |  88.605206 |  86.274129 |  84.051823 |  81.934056 |  79.916789 |  77.996175 |  76.168544 |  74.430401 |  72.778415 |  71.209415 |  69.720379 |  68.308433 |  66.970840 |
+
+``` r
+#Graphical Representation
+bau_mmr_regional_global_graph(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030, 2010, 2017, 2016, 2030)
+```
+
+    ## Warning: Column `iso`/`ISOCode` joining factor and character vector,
+    ## coercing into character vector
+
+![](WHO-MMR-MD-4-4-20_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
 
 \#Various tests
 

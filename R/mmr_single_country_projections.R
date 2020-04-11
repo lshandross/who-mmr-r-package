@@ -12,7 +12,7 @@
 #'
 #' @examples
 mmr_country_projections <- 
-  function(mmr_pivotwider_tibble, mmr_start_year = 2016, mmr_end_year = 2030, bau_start_year = 2010, bau_end_year = 2017, iso_code){
+  function(mmr_pivotwider_tibble, mmr_start_year, mmr_end_year, bau_start_year, bau_end_year, iso_code){
     
     years <- seq(mmr_start_year, mmr_end_year)
     num_years <- length(years)

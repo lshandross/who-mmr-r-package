@@ -84,7 +84,9 @@ mcp(mmr_est_unrounded_pwider, "AFG", 2016, 2030)
 - is there a way to remove the column numbers of the final tibble?
 
 ```{r}
-mmr_allcountries_projections(mmr_est_unrounded_pwider, 2010, 2017)
+mmr_allcountries_projections(mmr_est_unrounded_pwider, 2010, 2017, 2016, 2030)
+
+#(mmr_pivotwider_tibble, bau_start_year, bau_end_year, mmr_start_year, mmr_end_year)
 
 #new function does not have arr column
 macp(mmr_est_unrounded_pwider, 2016, 2030)
@@ -105,7 +107,7 @@ mmr2015 <- mmr_est_unrounded_pwider %>%
   rename(MMR2015 = `2015`) %>%
   select(`MMR2015`)
 
-get_mmr2030_sdg_projections(mmr2015, global_arr, 15)
+get_mmr_sdg_projections(mmr2015, global_arr, 15)
 
 ```
 
@@ -135,26 +137,19 @@ arr_sdg <- 0.05603232
 ```{r}
 get_arr_sdg_target_country(mmr2015, arr_sdg, 15)
 
-#Other checks
-#are the numbers I'm getting reasonable?
-
-mmr2030_country <- get_mmr2030_sdg_projections(mmr_est_unrounded_pwider, arr_sdg, 15)
-##
-arr_sdg_predictions <- get_arr_sdg_target_country(mmr2015, arr_sdg, 15)
-mmr_est_unrounded_pwider %>% 
-  cbind(arr_sdg_predictions) %>%
-  rename(sdg_arr = `MMR2015`)
-
-arr_sdg_predictions
-#compare bau arr values
-mmr_allcountries_projections(mmr_est_unrounded_pwider, 2010, 2017)
-
-#Does this return correctly values? (B/c what about the adjustments to 140 that we made? Like, does this function know we're going from the original MMR to the adjusted one?)
-
-
-get_mmr2030_sdg_projections(mmr2015, global_arr, 15) %>% 
-  cbind(get_mmr2030_sdg_projections(mmr2015, arr_sdg_predictions, 15)) 
-#%>% rename(sdg_arr = `get_mmr2030_sdg_projctions(mmr2015, arr_sdg_predictions)`)
+# #Other checks
+# #are the numbers I'm getting reasonable?
+# 
+# mmr_yr_n_country <- get_mmr_sdg_projections(mmr_est_unrounded_pwider, arr_sdg, 15)
+# ##
+# arr_sdg_predictions <- get_arr_sdg_target_country(mmr2015, arr_sdg, 15)
+# mmr_est_unrounded_pwider %>% 
+#   cbind(arr_sdg_predictions) %>%
+#   rename(sdg_arr = `MMR2015`)
+# 
+# arr_sdg_predictions
+# #compare bau arr values
+# mmr_allcountries_projections(mmr_est_unrounded_pwider, 2010, 2017)
 
 ```
 
@@ -176,22 +171,32 @@ mmr_regional_global_summarize(mmr_est_unrounded_pwider, countries_and_regions, l
 
 #data cleaning
 #mmr, countries and regions, live births combined tibble
-md <- left_join(mmr_allcountries_projections(mmr_est_unrounded_pwider, 2010, 2017) %>% select(-c(`name`, `arr`)), countries_and_regions, by = c("iso" = "ISOCode")) %>% left_join(live_birth_projections2030 %>% select(`LocID`, `Births`), by = c("ISONum" = "LocID")) 
+md <- left_join(mmr_allcountries_projections(mmr_est_unrounded_pwider, 2010, 2017, 2016, 2030) %>% select(-c(`name`, `arr`)), countries_and_regions, by = c("iso" = "ISOCode")) %>% left_join(live_birth_projections2030 %>% select(`LocID`, `Births`), by = c("ISONum" = "LocID")) 
 
 #example
 bau_mmr_regional_projection_summaries(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030, 2010, 2017, 2016, 2030)
 ```
+
+
+#Summary Graph
+```{r}
+bau_mmr_regional_global_graph(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030, 2010, 2017, 2016, 2030)
+
+```
+
+
 
 #Various tests
 ```{r}
 #does the calculated sdg arr lead to a global mmr of 70?
 
   #Global MMR using SDG ARR (avg of all countries)
-  (sum(get_mmr2030_sdg_projections(mmr2015, sum(arr_sdg_predictions) / 185, 15) * md$Births)) / (sum(md$Births)) #68.754
+  (sum(get_mmr_sdg_projections(mmr2015, sum(arr_sdg_predictions) / 185, 15) * md$Births)) / (sum(md$Births)) #68.754
 
   #Global MMR using BAU ARR (avg of all countries)
   bau_mmr_proj <- mmr_est_unrounded_pwider$`2015` * exp(-(rep(0.0273, 185)) * (2030-2015))
    (sum(bau_mmr_proj * md$Births)) / (sum(md$Births)) #166.529
+  #(is 170.117 by summary table calculations (using all countries' invidual arrs) above)
 
   
   #Global MMR using ARR = 2.9%
@@ -200,7 +205,7 @@ bau_mmr_regional_projection_summaries(mmr_est_unrounded_pwider, countries_and_re
 
   
 #
-(sum(get_mmr2030_sdg_projections(mmr2015, 0.04, 15) * md$Births)) / (sum(md$Births)) #80.325
+#(sum(get_mmr_sdg_projections(mmr2015, 0.04, 15) * md$Births)) / (sum(md$Births)) #80.325
 
 
 ```

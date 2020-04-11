@@ -1,7 +1,7 @@
 #note that this is all hardcoded and needs to be changed
 mmr_regional_global_summarize <-
   function(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble){
-    mmr_df <- left_join(mmr_allcountries_projections(mmr_pivotwider_tibble, 2010, 2017), countries_regions_tibble, by = c("iso" = "ISOCode")) %>%
+    mmr_df <- left_join(mmr_allcountries_projections(mmr_pivotwider_tibble, 2010, 2017, 2016, 2030), countries_regions_tibble, by = c("iso" = "ISOCode")) %>%
       left_join(birth_projections_tibble, by = c("ISONum" = "LocID"))
     global <- mmr_df %>%
       summarise(`MMR in 2016` = (sum(`2016`*`Births`))/(sum(`Births`)),
