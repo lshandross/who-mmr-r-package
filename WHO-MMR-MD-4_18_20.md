@@ -3,6 +3,26 @@ WHO MMR MD 4\_4\_20
 Li Shandross
 4/4/2020
 
+This document serves as documentation for the package \[PACKAGE NAME\]
+that aims to help analyze the data collected by the World Health
+Organization (WHO) on Maternal Mortality Ratio (MMR) around the world.
+WHO defines MMR as “the number of maternal deaths per 100,000 live
+births.” \[PACKAGE NAME\] is a collection of functions that work on
+estimates of maternal mortality between 2000 and 2017 (though we are
+focusing on 2010 to 2017) to gain insight about the projected MMR for
+every country between 2016 and 2030. In particular, this package is
+meant to assist WHO in the achieving the standard development goal (SDG)
+of a global MMR of 70 by 2030, with no single country having an MMR
+above 140, to reduce inequality in this sector.
+
+We compare MMR projections following the observed, Business As Usual
+(BAU) trends with these SDG projections that WHO hopes to achieve. The
+Average Rate of Reduction (ARR) is the average annual reduction in MMR a
+particular country or region experiences, and this ARR is used to
+calculate the desired projections.
+
+Each function below has more information about its purpose.
+
 \#Read-in Data
 
 ``` r
@@ -135,9 +155,11 @@ kable(cba_tibble[1:5, ])
 | AGO | 0.0429199 |
 | ATG | 0.0062833 |
 
-\#MMR Projections (for one country) MMR projections using a fixed value
-of the ARR for a country from baseyear 2015 to year t \> 2015 are
-defined as follows: Base Equation: MMR(t) = MMR(2015)*exp(-ARR *
+\#MMR Projections (for one country) Calculates the MMR projections for
+one country for a specified period using data from baseyear 2015 and the
+country’s respective BAU ARR. The single country is specified by using
+its assigned ISO code.  
+Base Equation: MMR(t) = MMR(2015)*exp(-ARR *
 (t-2015))
 
 ``` r
@@ -157,8 +179,10 @@ mcp(mmr_est_unrounded_pwider, "AFG", 2016, 2030)
     ##  [8] 442.5185 417.7779 394.4206 372.3691 351.5505 331.8959 313.3401
     ## [15] 295.8217
 
-\#MMR Projections (all countries) Base Equation: MMR(t) =
-MMR(2015)*exp(-ARR *
+\#MMR Projections (all countries) Calculates the MMR projections for all
+countries for a specified period using data from baseyear 2015 and each
+country’s respective BAU ARR. Base Equation: MMR(t) = MMR(2015)*exp(-ARR
+*
 (t-2015))
 
 ``` r
@@ -190,7 +214,10 @@ kable(macp_tibble[1:6, ])
 | col.4 | ATG | Antigua and Barbuda |  43.03696 |  42.76739 |  42.49951 |  42.23331 |  41.96878 |  41.70590 |  41.44467 |  41.18508 |  40.927115 |  40.670764 |  40.416019 |  40.162869 |  39.911305 |  39.661316 |  39.412894 |
 | col.5 | ARG | Argentina           |  39.88447 |  38.42193 |  37.01301 |  35.65576 |  34.34828 |  33.08875 |  31.87540 |  30.70654 |  29.580550 |  28.495846 |  27.450917 |  26.444305 |  25.474605 |  24.540464 |  23.640577 |
 
-\#SDG MMR Calculation, Categorization, and Adjustment Base Equation:
+\#SDG MMR Calculation, Categorization, and Adjustment Calculates the MMR
+projections for all using a fixed value of the ARR for a single year t
+\> 2015 using baseyear 2015, then adjusts the projections to be less
+than or equal to 140, as specified by the WHO’s SDG. Base Equation:
 MMR(t) = MMR(2015)*exp(-ARR * (t-2015)) For countries with
 mmr\_target2030 \> 140, replace mmr\_target by 140, mmr\_target\_final =
 ifelse(mmr\_target2030 \> 140, 140, mmr\_target)
@@ -202,13 +229,21 @@ mmr2015 <- mmr_est_unrounded_pwider %>%
   rename(MMR2015 = `2015`) %>%
   select(`MMR2015`)
 
-mmr_sdg_proj <- get_mmr_sdg_projections(mmr2015, global_arr, 15)
-#kable(mmr_sdg_proj[1:5, ])
-#fix to be a dataframe/tibble
+mmr_sdg_proj <- data.frame(get_mmr_sdg_projections(mmr2015, global_arr, 15))
+#make data.frame in function instead?
+kable(mmr_sdg_proj[1:5, ])
 ```
 
-\#Squared
-    Diff
+|          x |
+| ---------: |
+| 140.000000 |
+|   9.937566 |
+|  75.404901 |
+| 140.000000 |
+|  28.755982 |
+
+\#Squared Diff Calculates the squared difference
+    of…
 
 ``` r
 squared_diff(global_arr, mmr2015, live_birth_projections2030, 15)
@@ -294,7 +329,9 @@ kable(arr_sdg_target_country[1:5, ])
 | 0.0560323 |
 | 0.0560323 |
 
-\#(BAU) MMR Regional Summaries
+\#(BAU) MMR Regional Summaries 1) Produces a table of all the projected
+BAU MMRs by SDG region for a specified period. 2) Produces a line graph
+of all the projected BAU MMRs by SDG region.
 
 ``` r
 #some data cleaning
