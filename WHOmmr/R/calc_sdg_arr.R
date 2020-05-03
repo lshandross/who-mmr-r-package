@@ -14,6 +14,6 @@ calc_sdg_arr <- function(mmr_pivotwider_tibble, mmr2015_country, births_tibble, 
   mmr_yr_n_country <- get_mmr_sdg_proj(mmr2015_country, arr_sdg$minimum, nproject)
   sdg_arr_vector <- -1/nproject*log(mmr_yr_n_country/mmr2015_country)
   sdg_arr_tibble <- cbind(select(mmr_pivotwider_tibble, `iso`), sdg_arr_vector)
-  sdg_arr_tibble <- rename(sdg_arr_tibble, sdg_arr = "MMR2015")
+  sdg_arr_tibble <- rename(sdg_arr_tibble, sdg_arr = "sdg_afterfix140")
   sdg_arr_tibble
 }

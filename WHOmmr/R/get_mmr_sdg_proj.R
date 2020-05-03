@@ -11,5 +11,5 @@
 get_mmr_sdg_proj <- function(mmr2015_country, arr, nproject) {
   sdg_beforefix140 <- mmr2015_country[[1]] * exp(-arr * (nproject))
   sdg_afterfix140 <- ifelse(sdg_beforefix140 >140, 140, sdg_beforefix140)
-  return(sdg_afterfix140)
+  data.frame(sdg_afterfix140)
 }

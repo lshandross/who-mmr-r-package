@@ -52,7 +52,6 @@ global_mmr_summary <-
     mmr_df <- left_join(bau_mmr_all_countries_proj(mmr_pivotwider_tibble, arr_start_year_colnum, arr_end_year_colnum, proj_start_year, proj_end_year) %>% select(-c(`name`)),
                         countries_regions_tibble,
                         by = c("iso" = "ISOCode")) %>% left_join(birth_projections_tibble %>% select(`LocID`, `Births`), by = c("ISONum" = "LocID"))
-      #left_join(macp(mmr_pivotwider_tibble, proj_start_year, proj_end_year) %>% select(-c(`name`)), countries_regions_tibble, by = c("iso" = "ISOCode")) %>% left_join(birth_projections_tibble %>% select(`LocID`, `Births`), by = c("ISONum" = "LocID"))
 
     nvars <- ncol(mmr_df) -  4
     global_mmrs <- rep(NA, nvars)

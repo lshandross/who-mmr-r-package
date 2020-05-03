@@ -16,14 +16,10 @@ bau_mmr_all_countries_proj <- function(mmr_pivotwider_tibble, arr_start_year_col
 
   bau_tibble  <- NULL
   for(i in 1:nrow(calc_bau_arr(mmr_pivotwider_tibble, arr_start_year_colnum, arr_end_year_colnum))){
-    #bau_mmr_single_country_proj(mmr_pivotwider_tibble, iso_code, arr_start_year_colnum, arr_end_year_colnum, mmr_start_year, mmr_end_year)
     col <- bau_mmr_single_country_proj(mmr_pivotwider_tibble, iso_code = calc_bau_arr(mmr_pivotwider_tibble, arr_start_year_colnum, arr_end_year_colnum)$iso[i], arr_start_year_colnum, arr_end_year_colnum, mmr_start_year, mmr_end_year)
     bau_tibble <- rbind(bau_tibble, col)
     colnames(bau_tibble) <- years
   }
-
-
-
 
   namecountry <- select(mmr_pivotwider_tibble, "iso" , "name")
   mmrprojcountry <- cbind(namecountry, bau_tibble)

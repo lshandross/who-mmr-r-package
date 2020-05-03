@@ -17,8 +17,8 @@ squared_diff <- function(global_arr, mmr2015_country, births_tibble, nproject){
     right_join(mmr_est_unrounded_pwider, by = c("name" = "name")) %>%
     select(`Births`)
 
-  mmr_births <- sdg_prediction * testbirths
-  mmr_births1 <- filter(mmr_births, `Births` >1000)
+  mmr_births <-  testbirths * sdg_prediction
+  mmr_births1 <- filter(mmr_births, `Births` >1000) #data filtered due to large amounts that must be processed
   mmr_births2 <- filter(mmr_births, `Births`<=1000)
   births1 <- filter(testbirths, `Births`>500)
   births2 <- filter(testbirths, `Births`<=500)

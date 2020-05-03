@@ -59,10 +59,6 @@ load_all("WHOmmr")
     ## Loading WHOmmr
 
 ``` r
-# Rfiles <- list.files(file.path(paste0(getwd(),"/R/")), ".R")
-# Rfiles <- Rfiles[grepl(".R", Rfiles)]
-# sapply(paste0(paste0(getwd(),"/R/"), Rfiles), source)
-
 country_info <- read_excel("country list_ 26 March 2019.xlsx")
 mmr_est_unrounded <- read.csv("mmr_unrounded.csv")
 live_birth_projections <- read_excel("wpp2019_Births-TFR-GFR-Female1549.xlsx")
@@ -98,6 +94,11 @@ live_birth_projections2030 <- live_birth_projections %>%
 on the observed ARR from time1 to time2. Base Equation: ARR (for period
 t1 to t2) = -1/(t2-t1)\*log(MMR(t2)/MMR(t1))
 
+Tests: 1. Check inputs (stop if inputs for arguments are not as
+expected), both in terms of data type and in terms of if the numerical
+arguments are within an acceptable range. 2. Test to see if correct
+values are returned (using toy data) based on base equation in function.
+
 ``` r
 calc_bau_arr_tibble <- calc_bau_arr(mmr_est_unrounded_pwider, 3, 10)
 kable(calc_bau_arr_tibble[1:5, ])
@@ -115,8 +116,15 @@ kable(calc_bau_arr_tibble[1:5, ])
 one country for a specified period using data from baseyear 2015 and the
 country’s respective BAU ARR. The single country is specified by using
 its assigned ISO code.  
-Base Equation: MMR(t) = MMR(2015)*exp(-ARR *
-(t-2015))
+Base Equation: MMR(t) = MMR(2015)*exp(-ARR * (t-2015))
+
+Tests: 1. Check inputs (stop if inputs for arguments are not as
+expected), both in terms of data type and in terms of if the numerical
+arguments are within an acceptable range. 2. Test to see if correct
+values are returned (using toy data) based on base equation in function.
+3. Check that this function’s call to calc\_bau\_arr produces the
+correct
+results.
 
 ``` r
 bau_mmr_single_country_proj(mmr_est_unrounded_pwider, "AFG", 3, 10, 2016, 2030)
@@ -129,8 +137,15 @@ bau_mmr_single_country_proj(mmr_est_unrounded_pwider, "AFG", 3, 10, 2016, 2030)
 \#MMR Projections (all countries) Calculates the MMR projections for all
 countries for a specified period using data from baseyear 2015 and each
 country’s respective BAU ARR. Base Equation: MMR(t) = MMR(2015)*exp(-ARR
-*
-(t-2015))
+* (t-2015))
+
+Tests: 1. Check inputs (stop if inputs for arguments are not as
+expected), both in terms of data type and in terms of if the numerical
+arguments are within an acceptable range. 2. Test to see if correct
+values are returned (using toy data) based on base equation in function.
+3. Check that this function’s call to bau\_mmr\_single\_country\_proj
+(and thus calc\_bau\_arr, as well) produces the correct
+results.
 
 ``` r
 bau_mmr_proj_tibble <- bau_mmr_all_countries_proj(mmr_est_unrounded_pwider,3, 10, 2016, 2030)
@@ -154,6 +169,11 @@ MMR(t) = MMR(2015)*exp(-ARR * (t-2015)) For countries with
 mmr\_target2030 \> 140, replace mmr\_target by 140, mmr\_target\_final =
 ifelse(mmr\_target2030 \> 140, 140, mmr\_target)
 
+Tests: 1. Check inputs (stop if inputs for arguments are not as
+expected), both in terms of data type and in terms of if the numerical
+arguments are within an acceptable range. 2. Test to see if correct
+values are returned (using toy data) based on base equation in function.
+
 ``` r
 global_arr <- mean(calc_bau_arr(mmr_est_unrounded_pwider, 3, 10)$`arr`)
 
@@ -161,8 +181,7 @@ mmr2015 <- mmr_est_unrounded_pwider %>%
   rename(MMR2015 = `2015`) %>%
   select(`MMR2015`)
 
-mmr_sdg_proj <- data.frame(get_mmr_sdg_proj(mmr2015, global_arr, 15))
-#make data.frame in function instead?
+mmr_sdg_proj <- get_mmr_sdg_proj(mmr2015, global_arr, 15)
 kable(mmr_sdg_proj[1:5, ])
 ```
 
@@ -174,66 +193,37 @@ kable(mmr_sdg_proj[1:5, ])
 | 140.000000 |
 |  28.755982 |
 
-\#Squared Diff Calculates the squared difference
-    of…
+\#Squared Diff Calculates the squared difference of the global mmr of a
+specified year and the SDG goal of a global MMR of 70. Base Equation:
+(global\_mmr - 70)^2
+
+Tests: 1. Check inputs (stop if inputs for arguments are not as
+expected), both in terms of data type and in terms of if the numerical
+arguments are within an acceptable range. 2. Test to see if correct
+values are returned (using toy data) based on base equation in function.
+3. Check that this function’s call to get\_mmr\_sdg\_proj produces the
+correct results.
 
 ``` r
 squared_diff(global_arr, mmr2015, live_birth_projections2030, 15)
 ```
 
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-
     ## [1] 257.1634
 
-\#Get ARR SDG
-    Target
+\#Get ARR SDG Target Calculates the target ARR needed to achieve WHO’s
+SDG goal of a global MMR of 70, with no country with an MMR above 140,
+by 2030.
+
+Tests: 1. Check inputs (stop if inputs for arguments are not as
+expected), both in terms of data type and in terms of if the numerical
+arguments are within an acceptable range. 2. Test to see if correct
+values are returned (using toy data) based on base equation in the
+function. 3. Check that this function’s call to squared\_diff (and thus
+get\_mmr\_sdg\_proj, as well) produces the correct results.
 
 ``` r
-get_arr_sdg_target(mmr2015, live_birth_projections2030, nproject = 15)
+get_arr_sdg_target(mmr2015, live_birth_projections2030, 15)
 ```
-
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-    
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-    
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-    
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-    
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-    
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-    
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-    
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-    
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-    
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-    
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-    
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-    
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-    
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
 
     ## $minimum
     ## [1] 0.05603232
@@ -242,101 +232,28 @@ get_arr_sdg_target(mmr2015, live_birth_projections2030, nproject = 15)
     ## [1] 6.010324e-05
 
 ``` r
-sdg_arr <- get_arr_sdg_target(mmr2015, live_birth_projections2030, nproject = 15)$minimum
+sdg_arr <- get_arr_sdg_target(mmr2015, live_birth_projections2030, 15)$minimum
 ```
 
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-    
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-    
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-    
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-    
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-    
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-    
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-    
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-    
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-    
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-    
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-    
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-    
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-    
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
+\#Calculate SDG ARR for each country Based on SDG MMR Calculates the
+specific ARR for each country needed to achieve WHO’s SDG goal of a
+global MMR of 70, with no country with an MMR above 140, by 2030. Each
+country-specific ARR is based on the single target SDG ARR calculated.
 
-\#Calculate SDG ARR for each country Based on SDG MMR \#From Pseudo
-Code
+Base Equation: -1/nproject \*
+log(mmr\_sdg\_projections\_using\_sdg\_arr/2015\_mmr\_all\_countries)
+
+Tests: 1. Check inputs (stop if inputs for arguments are not as
+expected), both in terms of data type and in terms of if the numerical
+arguments are within an acceptable range. 2. Test to see if correct
+values are returned (using toy data) based on base equation in the
+function. 3. Check that this function’s call to get\_mmr\_sdg\_proj and
+get\_arr\_sdg\_proj (and thus squared\_diff, as well) produces the
+correct
+results.
 
 ``` r
-arr_sdg_target_country <- calc_sdg_arr(mmr_est_unrounded_pwider, mmr2015, live_birth_projections2030, 15)
-```
-
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-    
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-    
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-    
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-    
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-    
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-    
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-    
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-    
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-    
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-    
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-    
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-    
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-    
-    ## Warning: Column `name` joining character vector and factor, coercing into
-    ## character vector
-
-``` r
+ arr_sdg_target_country <- calc_sdg_arr(mmr_est_unrounded_pwider, mmr2015, live_birth_projections2030, 15)
 kable(arr_sdg_target_country[1:5, ])
 ```
 
@@ -352,49 +269,26 @@ kable(arr_sdg_target_country[1:5, ])
 BAU MMRs by SDG region for a specified period. 2) Produces a line graph
 of all the projected BAU MMRs by SDG region.
 
+Base Equation: MMR(region) =
+sum(region\_mmr\_proj\*region\_total\_births) /
+sum(region\_total\_births)
+
+Tests: 1. Check inputs (stop if inputs for arguments are not as
+expected), both in terms of data type and in terms of if the numerical
+arguments are within an acceptable range. 2. Test to see if correct
+values are returned (using toy data) based on base equation in the
+function. 3. Check that this function’s call to get\_mmr\_sdg\_proj and
+get\_arr\_sdg\_proj (and thus squared\_diff, as well) produces the
+correct results.
+
 ``` r
 #some data cleaning
 countries_and_regions <- country_info %>% 
   left_join(regional_groupings, by = c("ISOCode" = "ISOCode")) %>%
   select(-c(`Country.x`)) 
-```
 
-    ## Warning: Column `ISOCode` joining character vector and factor, coercing
-    ## into character vector
-
-``` r
-#example
+#Part 1: Table
 regional_proj_summaries <- bau_mmr_regional_projection_summaries(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030, 3, 10, 2016, 2030)
-```
-
-    ## Warning: Column `iso`/`ISOCode` joining factor and character vector,
-    ## coercing into character vector
-
-    ## Warning: Column `iso`/`ISOCode` joining factor and character vector,
-    ## coercing into character vector
-    
-    ## Warning: Column `iso`/`ISOCode` joining factor and character vector,
-    ## coercing into character vector
-    
-    ## Warning: Column `iso`/`ISOCode` joining factor and character vector,
-    ## coercing into character vector
-    
-    ## Warning: Column `iso`/`ISOCode` joining factor and character vector,
-    ## coercing into character vector
-    
-    ## Warning: Column `iso`/`ISOCode` joining factor and character vector,
-    ## coercing into character vector
-    
-    ## Warning: Column `iso`/`ISOCode` joining factor and character vector,
-    ## coercing into character vector
-    
-    ## Warning: Column `iso`/`ISOCode` joining factor and character vector,
-    ## coercing into character vector
-    
-    ## Warning: Column `iso`/`ISOCode` joining factor and character vector,
-    ## coercing into character vector
-
-``` r
 knitr::kable(regional_proj_summaries)
 ```
 
@@ -411,55 +305,62 @@ knitr::kable(regional_proj_summaries)
 | Western Asia and Northern Africa                      |  93.611651 |  91.049495 |  88.605206 |  86.274129 |  84.051823 |  81.934056 |  79.916789 |  77.996175 |  76.168544 |  74.430401 |  72.778415 |  71.209415 |  69.720379 |  68.308433 |  66.970840 |
 
 ``` r
-#Graphical Representation
+#Part 2: Graph
 bau_mmr_regional_global_graph(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030, 3, 10, 2016, 2030)
 ```
 
-    ## Warning: Column `iso`/`ISOCode` joining factor and character vector,
-    ## coercing into character vector
-    
-    ## Warning: Column `iso`/`ISOCode` joining factor and character vector,
-    ## coercing into character vector
-    
-    ## Warning: Column `iso`/`ISOCode` joining factor and character vector,
-    ## coercing into character vector
-    
-    ## Warning: Column `iso`/`ISOCode` joining factor and character vector,
-    ## coercing into character vector
-    
-    ## Warning: Column `iso`/`ISOCode` joining factor and character vector,
-    ## coercing into character vector
-    
-    ## Warning: Column `iso`/`ISOCode` joining factor and character vector,
-    ## coercing into character vector
-    
-    ## Warning: Column `iso`/`ISOCode` joining factor and character vector,
-    ## coercing into character vector
-    
-    ## Warning: Column `iso`/`ISOCode` joining factor and character vector,
-    ## coercing into character vector
-    
-    ## Warning: Column `iso`/`ISOCode` joining factor and character vector,
-    ## coercing into character vector
-
 ![](WHO-MMR-MD-4_24_20_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
 
-\#SDG MMR Projections
+\#SDG MMR Projections Calculates the SDG MMR projections for all
+countries for a specified period using data from baseyear 2015 and each
+country’s respective BAU ARR.
+
+Base Equation: MMR(t) = MMR(2015)*exp(-ARR * (t-2015))
+
+Tests: 1. Check inputs (stop if inputs for arguments are not as
+expected), both in terms of data type and in terms of if the numerical
+arguments are within an acceptable range. 2. Test to see if correct
+values are returned (using toy data) based on base equation in the
+function. 3. Check that this function’s call to
+sdg\_mmr\_single\_country\_proj produces the correct
+results.
 
 ``` r
-##TOFIX
+arr_tibble <- left_join(calc_bau_arr(mmr_est_unrounded_pwider, 3, 10), calc_sdg_arr(mmr_est_unrounded_pwider, mmr2015, live_birth_projections2030, 15), by = c("iso" = "iso")) 
+  arr_tibble <- rename(arr_tibble, `sdg arr` = sdg_arr, `bau arr` = arr)
 
-arr_tibble <- cbind(calc_bau_arr(mmr_est_unrounded_pwider, 3, 10), calc_sdg_arr(mmr_est_unrounded_pwider, mmr2015, live_birth_projections2030, 15)# %>%
-  #rename(`sdg arr` = MMR2015, `bau arr` = arr)
-  )
+sdg_mmr_single_country_proj(mmr_est_unrounded_pwider, arr_tibble, "AFG", 2016, 2030)
+```
 
-#sdg_mmr_single_country_proj(mmr_est_unrounded_pwider, arr_tibble, "AFG", 2016, 2030)
+    ##  [1] 629.7565 565.6225 508.0198 456.2833 409.8156 368.0802 330.5951
+    ##  [8] 296.9275 266.6885 239.5291 215.1356 193.2263 173.5482 155.8741
+    ## [15] 140.0000
 
- # years <- seq(mmr_start_year, mmr_end_year)
+``` r
 sdg_mmr_proj <- sdg_mmr_allcountries_proj(mmr_est_unrounded_pwider, arr_tibble, 2016, 2030) %>%
   select(-c("bau arr"))
  
 kable(sdg_mmr_proj[1:6, ])
-        
-kable(bau_mmr_proj_tibble[1:6, ])
 ```
+
+|       | name                | iso |   sdg arr |      2016 |      2017 |      2018 |      2019 |      2020 |      2021 |      2022 |       2023 |       2024 |       2025 |       2026 |       2027 |       2028 |       2029 |       2030 |
+| ----- | :------------------ | :-- | --------: | --------: | --------: | --------: | --------: | --------: | --------: | --------: | ---------: | ---------: | ---------: | ---------: | ---------: | ---------: | ---------: | ---------: |
+| col   | Afghanistan         | AFG | 0.1074065 | 629.75655 | 565.62246 | 508.01975 | 456.28327 | 409.81562 | 368.08020 | 330.59510 | 296.927460 | 266.688517 | 239.529093 | 215.135571 | 193.226272 | 173.548206 | 155.874144 | 140.000000 |
+| col.1 | Albania             | ALB | 0.0560323 |  14.15102 |  13.37991 |  12.65082 |  11.96146 |  11.30966 |  10.69338 |  10.11068 |   9.559737 |   9.038814 |   8.546276 |   8.080577 |   7.640255 |   7.223927 |   6.830285 |   6.458093 |
+| col.2 | Algeria             | DZA | 0.0560323 | 107.37599 | 101.52492 |  95.99268 |  90.76191 |  85.81616 |  81.13992 |  76.71849 |  72.537988 |  68.585290 |  64.847980 |  61.314321 |  57.973216 |  54.814173 |  51.827271 |  49.003130 |
+| col.3 | Angola              | AGO | 0.0560323 | 237.20391 | 224.27833 | 212.05709 | 200.50180 | 189.57617 | 179.24589 | 169.47853 | 160.243403 | 151.511513 | 143.255435 | 135.449242 | 128.068421 | 121.089790 | 114.491435 | 108.252634 |
+| col.4 | Antigua and Barbuda | ATG | 0.0560323 |  40.94830 |  38.71696 |  36.60722 |  34.61244 |  32.72636 |  30.94306 |  29.25692 |  27.662673 |  26.155294 |  24.730055 |  23.382479 |  22.108335 |  20.903620 |  19.764552 |  18.687554 |
+| col.5 | Argentina           | ARG | 0.0560323 |  39.14660 |  37.01344 |  34.99653 |  33.08952 |  31.28642 |  29.58158 |  27.96964 |  26.445532 |  25.004478 |  23.641948 |  22.353665 |  21.135582 |  19.983874 |  18.894924 |  17.865313 |
+
+``` r
+kable(bau_mmr_proj_tibble[1:6, ]) #maybe delete?
+```
+
+|       | iso | name                |      2016 |      2017 |      2018 |      2019 |      2020 |      2021 |      2022 |      2023 |       2024 |       2025 |       2026 |       2027 |       2028 |       2029 |       2030 |
+| ----- | :-- | :------------------ | --------: | --------: | --------: | --------: | --------: | --------: | --------: | --------: | ---------: | ---------: | ---------: | ---------: | ---------: | ---------: | ---------: |
+| col   | AFG | Afghanistan         | 661.96164 | 624.95235 | 590.01220 | 557.02549 | 525.88303 | 496.48169 | 468.72414 | 442.51848 | 417.777928 | 394.420587 | 372.369121 | 351.550519 | 331.895854 | 313.340052 | 295.821677 |
+| col.1 | ALB | Albania             |  14.30160 |  13.66618 |  13.05899 |  12.47878 |  11.92434 |  11.39454 |  10.88828 |  10.40451 |   9.942241 |   9.500507 |   9.078398 |   8.675044 |   8.289611 |   7.921302 |   7.569358 |
+| col.2 | DZA | Algeria             | 113.12986 | 112.69711 | 112.26602 | 111.83658 | 111.40877 | 110.98261 | 110.55807 | 110.13516 | 109.713871 | 109.294190 | 108.876114 | 108.459637 | 108.044753 | 107.631457 | 107.219741 |
+| col.3 | AGO | Angola              | 240.33472 | 230.23781 | 220.56510 | 211.29875 | 202.42170 | 193.91759 | 185.77075 | 177.96618 | 170.489489 | 163.326910 | 156.465245 | 149.891850 | 143.594616 | 137.561941 | 131.782709 |
+| col.4 | ATG | Antigua and Barbuda |  43.03696 |  42.76739 |  42.49951 |  42.23331 |  41.96878 |  41.70590 |  41.44467 |  41.18508 |  40.927115 |  40.670764 |  40.416019 |  40.162869 |  39.911305 |  39.661316 |  39.412894 |
+| col.5 | ARG | Argentina           |  39.88447 |  38.42193 |  37.01301 |  35.65576 |  34.34828 |  33.08875 |  31.87540 |  30.70654 |  29.580550 |  28.495846 |  27.450917 |  26.444305 |  25.474605 |  24.540464 |  23.640577 |
