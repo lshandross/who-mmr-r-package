@@ -2,7 +2,7 @@
 % Please edit documentation in R/bau_mmr_regional_projection_summaries.R
 \name{regional_mmr_summary}
 \alias{regional_mmr_summary}
-\title{Get Regional MMR Projections between 2016 and 2030}
+\title{Get Regional BAU MMR Projections between 2016 and 2030}
 \usage{
 regional_mmr_summary(mmr_pivotwider_tibble, countries_regions_tibble,
   birth_projections_tibble, sdg1_region, arr_start_year_colnum,
@@ -26,8 +26,8 @@ regional_mmr_summary(mmr_pivotwider_tibble, countries_regions_tibble,
 \item{proj_start_year}{A year to end the summary projections with}
 }
 \value{
-A one-line tibble summarizing the specificed region's MMR projections from 2016 to 2030
+A one-line tibble summarizing the specificed region's BAU MMR projections from 2016 to 2030
 }
 \description{
-Get Regional MMR Projections between 2016 and 2030
+Get Regional BAU MMR Projections between 2016 and 2030
 }

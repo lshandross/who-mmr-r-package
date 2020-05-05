@@ -4,7 +4,7 @@ sdg_mmr_single_country_proj <- function(mmr_pivotwider_tibble, bau_sdg_arr_tibbl
   arr_tibble_iso <- filter(bau_sdg_arr_tibble, iso == iso_code)
   
   iso_mmr_tibble <- filter(mmr_pivotwider_tibble, iso == iso_code)
-  projection <- rep(NA,num_years) #What does this do?
+  projection <- rep(NA,num_years)
   projection <- iso_mmr_tibble$`2015` * exp(-(arr_tibble_iso$`sdg arr`) * (years-2015))
   projection
 }

@@ -13,7 +13,7 @@
 bau_mmr_regional_projection_summaries <- function(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble, proj_start_year, proj_end_year) {
   
   #collect regional and global summaries, put into list
-  Global = global_mmr_summary(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble, proj_start_year, proj_end_year) 
+  Global = global_mmr_summary(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble, proj_start_year, proj_end_year)
   ANZ = regional_mmr_summary(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble, "Australia and New Zealand", proj_start_year, proj_end_year)
   CASA = regional_mmr_summary(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble, "Central Asia and Southern Asia", proj_start_year, proj_end_year)
   EASA = regional_mmr_summary(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble, "Eastern Asia and South-eastern Asia", proj_start_year, proj_end_year)
@@ -23,9 +23,9 @@ bau_mmr_regional_projection_summaries <- function(mmr_pivotwider_tibble, countri
   SSA = regional_mmr_summary(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble, "Sub-Saharan Africa", proj_start_year, proj_end_year)
   WANA = regional_mmr_summary(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble, "Western Asia and Northern Africa", proj_start_year, proj_end_year)
   
-  region_projections <- list(Global, ANZ, CASA, EASA, LAC, NAE, OOeANZ, 
+  region_projections <- list(Global, ANZ, CASA, EASA, LAC, NAE, OOeANZ,
                              SSA, WANA)
-
+  
   summary_table <- do.call(rbind, region_projections)
   summary_table <- rename(summary_table, `SDG Region` = "sdg_1")
   summary_table
@@ -116,7 +116,7 @@ regional_mmr_summary <- function(mmr_pivotwider_tibble, countries_regions_tibble
 #' @export
 #'
 #' @examples
-bau_mmr_regional_global_graph <- function(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble, proj_start_year, proj_end_year) {
+bau_mmr_regional_global_graph <- function(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble, arr_start_year_colnum, arr_end_year_colnum, proj_start_year, proj_end_year) {
   bau_mmr_regional_projection_summaries(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble, proj_start_year, proj_end_year) %>%
     pivot_longer(2:(proj_end_year - proj_start_year + 1), names_to = "period",values_to = "mmr") %>%
     ggplot() + geom_point(aes(x = period,y = mmr, color = `SDG Region`)) +
