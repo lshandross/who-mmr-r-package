@@ -1,7 +1,7 @@
 ---
 title: "WHO MMR Final Package Write-Up"
 author: "Li Shandross"
-date: "5/5/2020"
+date: "5/6/2020"
 output: 
   pdf_document: default
   html_document:
@@ -104,8 +104,6 @@ Calculates the MMR projections for all countries for a specified period using da
 #BAU Projections for all countries between 2016 and 2030
 bau_mmr_proj <- 
   mmr_proj_all_countries(mmr_est_unrounded_pwider, bau_arr_tibble, 2, 2016, 2030)
-bau_mmr_proj <- 
-  cbind(select(mmr_est_unrounded_pwider, name), bau_mmr_proj)
 kable(bau_mmr_proj[1:6, 1:5])
 kable(bau_mmr_proj[1:6, 6:11])
 kable(bau_mmr_proj[1:6, 12:17])
@@ -202,8 +200,6 @@ These are calculated by the general mmr_proj_all_countries, mmr_proj_all_regions
 ```{r}
 sdg_mmr_proj <- 
   mmr_proj_all_countries(mmr_est_unrounded_pwider, sdg_arr_tibble, 2, 2016, 2030) 
-sdg_mmr_proj <- 
-  cbind(select(mmr_est_unrounded_pwider, name), sdg_mmr_proj)
 kable(sdg_mmr_proj[1:6, 1:5])
 kable(sdg_mmr_proj[1:6, 6:11])
 kable(sdg_mmr_proj[1:6, 12:17])

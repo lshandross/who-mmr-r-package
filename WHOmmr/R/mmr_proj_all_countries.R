@@ -18,6 +18,8 @@ mmr_proj_all_countries <- function(mmr_pivotwider_tibble, arr_tibble, arr_col_nu
   }
 
   colnames(mmr_proj_tibble) <- seq(mmr_start_year, mmr_end_year)
-  mmr_tibble <- cbind(select(arr_tibble, -c(arr_col_num)), mmr_proj_tibble)
+  mmr_tibble <- cbind(select(mmr_pivotwider_tibble, c(`iso`, `name`)), mmr_proj_tibble)
+
+
   mmr_tibble
 }
