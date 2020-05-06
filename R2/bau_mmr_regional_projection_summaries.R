@@ -1,4 +1,4 @@
-#' Get MMR Projections for a Specified Period by Region and Globally
+#' Get BAU MMR Projections for a Specified Period by Region and Globally
 #'
 #' @param mmr_pivotwider_tibble A tibble that contains all countries' MMR in the pivotwider format
 #' @param countries_regions_tibble A tibble that lists all countries and the region they belong to
@@ -8,7 +8,7 @@
 #' @param proj_start_year A year to begin the summary projections from
 #' @param proj_end_year A year to end the summary projections with
 #'
-#' @return A tibble summarizing regional and global MMR projections for a specified time period
+#' @return A tibble summarizing regional and global BAU MMR projections for a specified time period
 #' @export
 #'
 #' @examples
@@ -33,7 +33,7 @@ bau_mmr_regional_projection_summaries <- function(mmr_pivotwider_tibble, countri
 }
 
 
-#' Get Global MMR Projections for a Specified Period
+#' Get Global BAU MMR Projections for a Specified Period
 #'
 #' @param mmr_pivotwider_tibble A tibble that contains all countries' MMR in the pivotwider format
 #' @param countries_regions_tibble A tibble that lists all countries and the region they belong to
@@ -43,7 +43,7 @@ bau_mmr_regional_projection_summaries <- function(mmr_pivotwider_tibble, countri
 #' @param proj_start_year A year to begin the summary projections from
 #' @param proj_end_year A year to end the summary projections with
 #'
-#' @return A one-line tibble summarizing global MMR projections for a Specified Period
+#' @return A one-line tibble summarizing global BAU MMR projections for a Specified Period
 #' @export
 #'
 #' @examples
@@ -71,7 +71,7 @@ global_mmr_summary <-
   }
 
 
-#' Get Regional MMR Projections between 2016 and 2030
+#' Get Regional BAU MMR Projections between 2016 and 2030
 #'
 #' @param mmr_pivotwider_tibble A tibble that contains all countries' MMR in the pivotwider format
 #' @param countries_regions_tibble A tibble that lists all countries and the region they belong to
@@ -82,7 +82,7 @@ global_mmr_summary <-
 #' @param proj_start_year A year to begin the summary projections from
 #' @param proj_start_year A year to end the summary projections with
 #'
-#' @return A one-line tibble summarizing the specificed region's MMR projections from 2016 to 2030
+#' @return A one-line tibble summarizing the specificed region's BAU MMR projections from 2016 to 2030
 #' @export
 #'
 #' @examples
@@ -113,7 +113,7 @@ regional_mmr_summary <- function(mmr_pivotwider_tibble, countries_regions_tibble
 
 
 
-#' Get Graph of Regional MMR Projections between 2016 and 2030
+#' Get Graph of Regional BAU MMR Projections between 2016 and 2030
 #'
 #' @param mmr_pivotwider_tibble A tibble that contains all countries' MMR in the pivotwider format
 #' @param countries_regions_tibble A tibble that lists all countries and the region they belong to
@@ -123,7 +123,7 @@ regional_mmr_summary <- function(mmr_pivotwider_tibble, countries_regions_tibble
 #' @param proj_start_year A year to begin the summary projections from
 #' @param proj_end_year A year to end the summary projections with
 #'
-#' @return Line graph summarizing regional and global MMR projections for a specified time period
+#' @return Line graph summarizing regional and global BAU MMR projections for a specified time period
 #' @export
 #'
 #' @examples

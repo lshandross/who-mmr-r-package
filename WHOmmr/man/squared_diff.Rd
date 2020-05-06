@@ -4,14 +4,14 @@
 \alias{squared_diff}
 \title{Calculate Squared Difference of actual MMR versus the SDG MMR}
 \usage{
-squared_diff(global_arr, mmr2015_country, births_tibble, nproject)
+squared_diff(global_arr, mmr2015_country, births_vector, nproject)
 }
 \arguments{
 \item{global_arr}{The calculated global ARR}
 
 \item{mmr2015_country}{A vector with MMR for 2015 for all countries}
 
-\item{births_tibble}{A tibble with the births by country for 2030}
+\item{births_vector}{A tibble with the births by country for desired year, must have same number of rows as mmr2015_country with the column of births titled `Births`}
 
 \item{nproject}{The number of years to project, number of years since the base year, 2015}
 }

@@ -2,7 +2,7 @@
 % Please edit documentation in R/get_mmr_sdg_proj.R
 \name{get_mmr_sdg_proj}
 \alias{get_mmr_sdg_proj}
-\title{Calculate MMR projections for all countries based on a chosen ARR}
+\title{Calculate the target year's MMR projections, Adjusted for No Country's MMR Above 140, based on a chosen ARR}
 \usage{
 get_mmr_sdg_proj(mmr2015_country, arr, nproject)
 }
@@ -14,8 +14,8 @@ get_mmr_sdg_proj(mmr2015_country, arr, nproject)
 \item{nproject}{Number of years to project, number of years since the base year, 2015}
 }
 \value{
-The MMR projections based on a chosen ARR
+The MMR projections based on a chosen ARR, adjusted so no country has an MMR over 140
 }
 \description{
-Calculate MMR projections for all countries based on a chosen ARR
+Calculate the target year's MMR projections, Adjusted for No Country's MMR Above 140, based on a chosen ARR
 }

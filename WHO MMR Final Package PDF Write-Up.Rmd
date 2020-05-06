@@ -1,0 +1,234 @@
+---
+title: "WHO MMR Final Package Write-Up"
+author: "Li Shandross"
+date: "5/5/2020"
+output: 
+  pdf_document: default
+  html_document:
+    keep_md: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#### Description
+This document serves as documentation for the package WHOmmr that aims to help analyze the data collected by the World Health Organization (WHO) on Maternal Mortality Ratio (MMR) around the world. WHO defines MMR as "the number of maternal deaths per 100,000 live births." WHOmmr is a collection of functions that work on estimates of maternal mortality between 2000 and 2017 (though we are focusing on 2010 to 2017) to gain insight about the projected MMR for every country between 2016 and 2030. In particular, this package is meant to assist WHO in the achieving the standard development goal (SDG) of a global MMR of 70 by 2030, with no single country having an MMR above 140, to reduce inequality in this sector. 
+
+We compare MMR projections following the observed, Business As Usual (BAU) trends with these SDG projections that WHO hopes to achieve. The Average Rate of Reduction (ARR) is the average annual reduction in MMR a particular country or region experiences, and this ARR is used to calculate the desired projections.  
+
+Below, a description of each function is provided about its purpose and an example is given for its implementation
+
+```{r, include=FALSE}
+#Load Package and Read-in Data
+library(tidyr)
+library(tidyverse)
+library(readxl)
+library(dplyr)
+library(devtools)
+library(usethis)
+library(knitr)
+
+load_all("WHOmmr")
+
+country_info <- read_excel("country list_ 26 March 2019.xlsx")
+mmr_est_unrounded <- read.csv("mmr_unrounded.csv")
+live_birth_projections <- read_excel("wpp2019_Births-TFR-GFR-Female1549.xlsx")
+regional_groupings <- read.csv("regional_groupings_20190910_la_ac.csv")
+```  
+
+
+```{r, include=FALSE}
+#Data Cleaning
+country_info <- country_info %>%
+  select(`Code`, `ISO_Numeric_Code_CODE`, `Title`) %>%
+  rename(ISOCode = `Code`, ISONum = `ISO_Numeric_Code_CODE`)
+  
+mmr_est_unrounded <- mmr_est_unrounded %>%
+  filter(`bound` == "point", `year` >= 2010) %>%
+  select(-c(`q`, `perc`, `bound`)) %>%
+  mutate("MMR" = `value` * 100000)
+
+mmr_est_unrounded_pwider <- mmr_est_unrounded %>%
+  select(-c(`value`)) %>%
+  pivot_wider(names_from = `year`, values_from = `MMR`)
+  
+regional_groupings <- regional_groupings %>%
+  select(`ISOCode`, `Country.x`, `sdg_1`)
+
+live_birth_projections2030 <- live_birth_projections %>% 
+  filter(Year == 2030) %>%
+  select(-c(`Year`)) %>%
+  rename(name = 'Location') 
+```
+
+#### Calc BAU ARR
+Calculates the observed (BAU) ARR of each country based on the observed ARR from time1 to time2.   
+
+**Base Equation:** ARR (for period t1 to t2) = -1/(t2 - t1) * log(MMR(t2) / MMR(t1))  
+
+**Tests**  
+- Check inputs (stop if inputs for arguments are not as expected), both in terms of data type and in terms of if the numerical arguments are within an acceptable range.  
+- Test to see if correct values are returned (using toy data) based on base equation in function.  
+```{r, warning=F}
+bau_arr_tibble <- 
+  calc_bau_arr(mmr_est_unrounded_pwider, 3, 10)
+kable(bau_arr_tibble[1:5, ])
+```
+
+
+#### MMR Projections (single country)  
+Calculates the MMR projections for one country during a specified period using data from baseyear 2015 and the country's respective ARR. The single country is specified by using its assigned ISO code. (This function can be used for any MMR projections when provided with an tibble of ARRs for each country.)
+
+**Base Equation:** MMR(t) = MMR(2015) * exp(-ARR * (t - 2015))  
+
+**Tests:**   
+- Check inputs (stop if inputs for arguments are not as expected), both in terms of data type and in terms of if the numerical arguments are within an acceptable range.  
+- Test to see if correct values are returned (using toy data) based on base equation in function.  
+```{r}
+#BAU MMR Projections for Afghanistan
+mmr_proj_single_country(mmr_est_unrounded_pwider, bau_arr_tibble, 2, "AFG", 2016, 2030) 
+```
+
+
+#### MMR Projections (all countries)  
+Calculates the MMR projections for all countries for a specified period using data from baseyear 2015 and each country's respective ARR. (This function can be used for any MMR projections when provided with an tibble of ARRs for each country.)
+
+**Base Equation:** MMR(t) = MMR(2015) * exp(-ARR * (t - 2015))  
+
+**Tests:**  
+- Check inputs (stop if inputs for arguments are not as expected), both in terms of data type and in terms of if the numerical arguments are within an acceptable range.  
+- Test to see if correct values are returned (using toy data) based on base equation in function.  
+- Check that this function's call to mmr_proj_single_country produces the correct results.  
+```{r}
+#BAU Projections for all countries between 2016 and 2030
+bau_mmr_proj <- 
+  mmr_proj_all_countries(mmr_est_unrounded_pwider, bau_arr_tibble, 2, 2016, 2030)
+bau_mmr_proj <- 
+  cbind(select(mmr_est_unrounded_pwider, name), bau_mmr_proj)
+kable(bau_mmr_proj[1:6, 1:5])
+kable(bau_mmr_proj[1:6, 6:11])
+kable(bau_mmr_proj[1:6, 12:17])
+```
+
+
+#### MMR Projections (by region)   
+1.  Produces a table of all the projected MMRs by SDG region for a specified period.  
+2.  Produces a line graph of all the projected MMRs by SDG region.  
+
+These main two functions can be used for any MMR projections when provided with an tibble of MMR projections for all countries. However, note that the large, wrapper functions can only be used on data formatted in exactly the same way as the WHO MMR data with the same region definitions and names. Using the individual global and regional prediction functions is suitable for data formatted slightly differently.
+
+**Base Equation:** MMR(region) = sum(region_mmr_proj * region_total_births) / sum(region_total_births)
+
+**Tests:**  
+- Check inputs (stop if inputs for arguments are not as expected), both in terms of data type and in terms of if the numerical arguments are within an acceptable range.  
+- Test to see if the correct values are returned (using toy data) based on base equation in the function.  
+- Check that this function's call to the two helper functions produces the correct results.  
+
+```{r, include=FALSE}
+countries_and_regions <- readRDS(file = "Rds/countries_regions.Rds")
+births2030 <- select(live_birth_projections2030, c(`Births`, `LocID`)) 
+```
+
+```{r, warning=F}
+#Part 1: Table - BAU Regional Projections for 2016 to 2030
+bau_regional_proj_summaries <- 
+  mmr_proj_all_regions(mmr_est_unrounded_pwider, 
+                       bau_mmr_proj, 
+                       countries_and_regions, 
+                       births2030, 
+                       2016, 
+                       2030)
+knitr::kable(bau_regional_proj_summaries[, 1:4])
+knitr::kable(bau_regional_proj_summaries[, 5:11])
+knitr::kable(bau_regional_proj_summaries[, 12:16])
+
+#Part 2: Graph - BAU Regional Projections for 2016 to 2030
+mmr_proj_all_regions_graph(mmr_est_unrounded_pwider, 
+                           bau_mmr_proj, 
+                           countries_and_regions, 
+                           births2030, 
+                           2016, 
+                           2030)
+```
+
+
+#### Get ARR SDG Target  
+Calculates the target ARR needed to achieve WHO's SDG goal of a global MMR of 70, with no  country with an MMR above 140, by 2030.  
+
+**Base Equation:** N/A, R minimizes the results of the squared_diff function which calls get_mmr_sdg_proj  
+
+**Tests:**  
+- Check inputs (stop if inputs for arguments are not as expected), both in terms of data type and in terms of if the numerical arguments are within an acceptable range.  
+- Test to see if correct values are returned (using toy data) based on base equation in the function.  
+- Check that this function's call to its inner function, squared_diff (and thus get_mmr_sdg_proj, as well) produces the correct results.  
+```{r, include=FALSE}
+mmr2015 <- readRDS(file = "Rds/mmr2015.Rds")
+global_arr <- readRDS(file = "Rds/global_bau_arr.Rds")
+births <- live_birth_projections2030 %>%
+    right_join(mmr_est_unrounded_pwider, by = c("name" = "name")) %>%
+    select(`Births`)
+```
+
+```{r, warning=F}
+get_arr_sdg_target(mmr2015, births, 15)
+```
+
+```{r, include=FALSE}
+sdg_arr_target <- get_arr_sdg_target(mmr2015, births, 15)$minimum
+```
+
+
+#### Calculate SDG ARR for each country Based on SDG MMR  
+Calculates the specific ARR for each country needed to achieve WHO's SDG goal of a global MMR of 70, with no country with an MMR above 140, by 2030. Each country-specific ARR is based on the single target SDG ARR calculated. 
+
+**Base Equation:** -1/nproject * log(mmr_sdg_projections_using_sdg_arr/2015_mmr_all_countries)
+
+**Tests:**  
+-  Check inputs (stop if inputs for arguments are not as expected), both in terms of data type and in terms of if the numerical arguments are within an acceptable range.  
+-  Test to see if correct values are returned (using toy data) based on base equation in the function.  
+-  Check that this function's call to get_mmr_sdg_proj and get_arr_sdg_proj (and thus squared_diff, as well) produces the correct results.  
+```{r, warning=F}
+sdg_arr_tibble <- 
+  calc_sdg_arr(mmr_est_unrounded_pwider, sdg_arr_target, mmr2015, births, 15)
+kable(sdg_arr_tibble[1:5, ])
+```
+
+
+#### SDG MMR Projections 
+These are calculated by the general mmr_proj_all_countries, mmr_proj_all_regions, and mmr_proj_all_regions_graph, respectively. See above for more details. 
+
+**SDG MMR Projections for 2016 to 2030**
+```{r}
+sdg_mmr_proj <- 
+  mmr_proj_all_countries(mmr_est_unrounded_pwider, sdg_arr_tibble, 2, 2016, 2030) 
+sdg_mmr_proj <- 
+  cbind(select(mmr_est_unrounded_pwider, name), sdg_mmr_proj)
+kable(sdg_mmr_proj[1:6, 1:5])
+kable(sdg_mmr_proj[1:6, 6:11])
+kable(sdg_mmr_proj[1:6, 12:17])
+```
+ 
+
+**SDG MMR Regional Projections**  
+```{r, warning=F}
+#Part 1: Table - SDG Regional Projections for 2016 to 2030
+sdg_regional_proj_summaries <- 
+  mmr_proj_all_regions(mmr_est_unrounded_pwider, 
+                       sdg_mmr_proj, 
+                       countries_and_regions, 
+                       births2030, 
+                       2016, 
+                       2030)
+knitr::kable(sdg_regional_proj_summaries[, 1:4])
+knitr::kable(sdg_regional_proj_summaries[, 5:11])
+knitr::kable(sdg_regional_proj_summaries[, 12:16])
+
+#Part 2: Graph - SDG Regional Projections for 2016 to 2030
+mmr_proj_all_regions_graph(mmr_est_unrounded_pwider, 
+                           sdg_mmr_proj, 
+                           countries_and_regions, 
+                           births2030, 
+                           2016, 
+                           2030)
+```

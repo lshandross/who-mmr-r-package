@@ -2,14 +2,14 @@
 % Please edit documentation in R/get_arr_sdg_target.R
 \name{get_arr_sdg_target}
 \alias{get_arr_sdg_target}
-\title{Calculate the ARR SDG Target (to later get country-specific arrs)}
+\title{Calculate the ARR SDG Target (to later obtain country-specific arrs)}
 \usage{
-get_arr_sdg_target(mmr2015_country, births_tibble, nproject)
+get_arr_sdg_target(mmr2015_country, births_vector, nproject)
 }
 \arguments{
 \item{mmr2015_country}{A vector with MMR for 2015 for all countries}
 
-\item{births_tibble}{A tibble with the births by country for 2030}
+\item{births_vector}{A tibble with the births by country for desired year, must have same number of rows as mmr2015_country with the column of births titled `Births`}
 
 \item{nproject}{The number of years to project, number of years since the base year, 2015}
 }
@@ -17,5 +17,5 @@ get_arr_sdg_target(mmr2015_country, births_tibble, nproject)
 Optimizes the SDG ARR to help with the calculation of SDG ARRs for each country
 }
 \description{
-Calculate the ARR SDG Target (to later get country-specific arrs)
+Calculate the ARR SDG Target (to later obtain country-specific arrs)
 }

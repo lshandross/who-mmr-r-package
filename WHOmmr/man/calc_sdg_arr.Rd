@@ -2,13 +2,15 @@
 % Please edit documentation in R/calc_sdg_arr.R
 \name{calc_sdg_arr}
 \alias{calc_sdg_arr}
-\title{Calculate the SDG Target ARR For All Countries}
+\title{Calculate the SDG ARR For All Countries}
 \usage{
-calc_sdg_arr(mmr_pivotwider_tibble, mmr2015_country, births_tibble,
-  nproject)
+calc_sdg_arr(mmr_pivotwider_tibble, sdg_arr_goal, mmr2015_country,
+  births_tibble, nproject)
 }
 \arguments{
 \item{mmr_pivotwider_tibble}{A tibble that includes all countries' observed MMR in the pivotwider format}
+
+\item{sdg_arr_goal}{The target SDG ARR (a single number between 0 and 1)}
 
 \item{mmr2015_country}{A vector with MMR for 2015 for all countries}
 
@@ -20,5 +22,5 @@ calc_sdg_arr(mmr_pivotwider_tibble, mmr2015_country, births_tibble,
 A vector of the calculated SDG target ARRs for all countries and their corresponding ISO codes
 }
 \description{
-Calculate the SDG Target ARR For All Countries
+Calculate the SDG ARR For All Countries
 }
