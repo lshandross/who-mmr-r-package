@@ -104,9 +104,10 @@ Calculates the MMR projections for all countries for a specified period using da
 #BAU Projections for all countries between 2016 and 2030
 bau_mmr_proj <- 
   mmr_proj_all_countries(mmr_est_unrounded_pwider, bau_arr_tibble, 2, 2016, 2030)
-kable(bau_mmr_proj[1:6, 1:5])
-kable(bau_mmr_proj[1:6, 6:11])
-kable(bau_mmr_proj[1:6, 12:17])
+bau_mmr_proj_rounded <- #rounded to 2 decimal places
+  mutate_if(bau_mmr_proj, is.numeric, round, 2) 
+kable(bau_mmr_proj_rounded[1:6, 1:8])
+kable(bau_mmr_proj_rounded[1:6, 9:17])
 ```
 
 
@@ -137,9 +138,10 @@ bau_regional_proj_summaries <-
                        births2030, 
                        2016, 
                        2030)
-knitr::kable(bau_regional_proj_summaries[, 1:4])
-knitr::kable(bau_regional_proj_summaries[, 5:11])
-knitr::kable(bau_regional_proj_summaries[, 12:16])
+bau_regional_proj_rounded <- #rounded to 2 decimal places
+   mutate_if(bau_regional_proj_summaries, is.numeric, round, 2) 
+kable(bau_regional_proj_rounded[, 1:6])
+kable(bau_regional_proj_rounded[, 7:16])
 
 #Part 2: Graph - BAU Regional Projections for 2016 to 2030
 mmr_proj_all_regions_graph(mmr_est_unrounded_pwider, 
@@ -200,9 +202,10 @@ These are calculated by the general mmr_proj_all_countries, mmr_proj_all_regions
 ```{r}
 sdg_mmr_proj <- 
   mmr_proj_all_countries(mmr_est_unrounded_pwider, sdg_arr_tibble, 2, 2016, 2030) 
-kable(sdg_mmr_proj[1:6, 1:5])
-kable(sdg_mmr_proj[1:6, 6:11])
-kable(sdg_mmr_proj[1:6, 12:17])
+sdg_mmr_proj_rounded <-  #rounded to 2 decimal places
+  mutate_if(sdg_mmr_proj, is.numeric, round, 2)
+kable(sdg_mmr_proj_rounded[1:6, 1:8])
+kable(sdg_mmr_proj_rounded[1:6, 9:17])
 ```
  
 
@@ -216,9 +219,10 @@ sdg_regional_proj_summaries <-
                        births2030, 
                        2016, 
                        2030)
-knitr::kable(sdg_regional_proj_summaries[, 1:4])
-knitr::kable(sdg_regional_proj_summaries[, 5:11])
-knitr::kable(sdg_regional_proj_summaries[, 12:16])
+sdg_regional_proj_rounded <- #rounded to 2 decimal places
+   mutate_if(sdg_regional_proj_summaries, is.numeric, round, 2) 
+kable(sdg_regional_proj_rounded[, 1:6])
+kable(sdg_regional_proj_rounded[, 7:16])
 
 #Part 2: Graph - SDG Regional Projections for 2016 to 2030
 mmr_proj_all_regions_graph(mmr_est_unrounded_pwider, 

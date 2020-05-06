@@ -67,7 +67,7 @@ Calculates the observed (BAU) ARR of each country based on the observed ARR from
 **Tests**  
 - Check inputs (stop if inputs for arguments are not as expected), both in terms of data type and in terms of if the numerical arguments are within an acceptable range.  
 - Test to see if correct values are returned (using toy data) based on base equation in function.  
-```{r}
+```{r, warning=F}
 bau_arr_tibble <- calc_bau_arr(mmr_est_unrounded_pwider, 3, 10)
 kable(bau_arr_tibble[1:5, ])
 ```
@@ -98,8 +98,9 @@ Calculates the MMR projections for all countries for a specified period using da
 - Check that this function's call to mmr_proj_single_country produces the correct results.  
 ```{r}
 #BAU Projections for all countries between 2016 and 2030
-bau_mmr_proj <- mmr_proj_all_countries(mmr_est_unrounded_pwider, bau_arr_tibble, 2, 2016, 2030) 
-kable(bau_mmr_proj[1:6, ])
+bau_mmr_proj <- mmr_proj_all_countries(mmr_est_unrounded_pwider, bau_arr_tibble, 2, 2016, 2030)
+bau_mmr_proj_rounded <- mutate_if(bau_mmr_proj, is.numeric, round, 2) #rounded to 2 decimal places
+kable(bau_mmr_proj_rounded[1:6, ])
 ```
 
 
@@ -123,8 +124,15 @@ births2030 <- select(live_birth_projections2030, c(`Births`, `LocID`))
 
 ```{r, warning=F}
 #Part 1: Table - BAU Regional Projections for 2016 to 2030
-bau_regional_proj_summaries <- mmr_proj_all_regions(mmr_est_unrounded_pwider, bau_mmr_proj, countries_and_regions, births2030, 2016, 2030)
-knitr::kable(bau_regional_proj_summaries)
+bau_regional_proj_summaries <- 
+  mmr_proj_all_regions(mmr_est_unrounded_pwider, 
+                       bau_mmr_proj, 
+                       countries_and_regions, 
+                       births2030, 
+                       2016, 
+                       2030)
+bau_regional_proj_rounded <- mutate_if(bau_regional_proj_summaries, is.numeric, round, 2) #rounded to 2 decimal places
+kable(bau_regional_proj_rounded)
 
 #Part 2: Graph - BAU Regional Projections for 2016 to 2030
 mmr_proj_all_regions_graph(mmr_est_unrounded_pwider, bau_mmr_proj, countries_and_regions, births2030, 2016, 2030)
@@ -178,7 +186,8 @@ These are calculated by the general mmr_proj_all_countries, mmr_proj_all_regions
 **SDG MMR Projections for 2016 to 2030**
 ```{r}
 sdg_mmr_proj <- mmr_proj_all_countries(mmr_est_unrounded_pwider, sdg_arr_tibble, 2, 2016, 2030) 
-kable(sdg_mmr_proj[1:6, ])
+sdg_mmr_proj_rounded <- mutate_if(sdg_mmr_proj, is.numeric, round, 2) #rounded to 2 decimal places
+kable(sdg_mmr_proj_rounded[1:6, ])
 ```
  
 
@@ -186,7 +195,8 @@ kable(sdg_mmr_proj[1:6, ])
 ```{r, warning=F}
 #Part 1: Table - SDG Regional Projections for 2016 to 2030
 sdg_regional_proj_summaries <- mmr_proj_all_regions(mmr_est_unrounded_pwider, sdg_mmr_proj, countries_and_regions, births2030, 2016, 2030)
-knitr::kable(sdg_regional_proj_summaries)
+sdg_regional_proj_rounded <- mutate_if(sdg_regional_proj_summaries, is.numeric, round, 2) #rounded to 2 decimal places
+kable(sdg_regional_proj_rounded)
 
 #Part 2: Graph - SDG Regional Projections for 2016 to 2030
 mmr_proj_all_regions_graph(mmr_est_unrounded_pwider, sdg_mmr_proj, countries_and_regions, births2030, 2016, 2030)
