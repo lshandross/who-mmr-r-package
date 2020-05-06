@@ -1,0 +1,163 @@
+---
+title: "WHO MMR MD 4_4_20"
+author: "Li Shandross"
+date: "4/4/2020"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Read-in Data
+```{r}
+library(tidyr)
+library(tidyverse)
+library(readxl)
+library(devtools)
+library(usethis)
+
+Rfiles <- list.files(file.path(paste0(getwd(),"/R/")), ".R")
+Rfiles <- Rfiles[grepl(".R", Rfiles)]
+sapply(paste0(paste0(getwd(),"/R/"), Rfiles), source)
+
+country_info <- read_excel("country list_ 26 March 2019.xlsx")
+mmr_est_unrounded <- read.csv("mmr_unrounded.csv")
+live_birth_projections <- read_excel("wpp2019_Births-TFR-GFR-Female1549.xlsx")
+regional_groupings <- read.csv("regional_groupings_20190910_la_ac.csv")
+```
+
+
+#Data Cleaning
+```{r}
+country_info <- country_info %>%
+  select(`Code`, `ISO_Numeric_Code_CODE`, `Title`) %>%
+  rename(ISOCode = `Code`, ISONum = `ISO_Numeric_Code_CODE`)
+  
+mmr_est_unrounded <- mmr_est_unrounded %>%
+  filter(`bound` == "point", `year` >= 2010) %>%
+  select(-c(`q`, `perc`, `bound`)) %>%
+  mutate("MMR" = `value` * 100000)
+
+mmr_est_unrounded_pwider <- mmr_est_unrounded %>%
+  select(-c(`value`)) %>%
+  pivot_wider(names_from = `year`, values_from = `MMR`)
+  
+regional_groupings <- regional_groupings %>%
+  select(`ISOCode`, `Country.x`, `sdg_1`)
+
+live_birth_projections2030 <- live_birth_projections %>% 
+  filter(Year == 2030) %>%
+  select(-c(`Year`)) %>%
+  rename(name = 'Location') 
+```
+
+#Calc BAU ARR
+```{r}
+calc_bau_arr_tibble <- calc_bau_arr(mmr_est_unrounded_pwider, 2010, 2017)
+knitr::kable(calc_bau_arr_tibble)
+
+#new function only has bau arr and iso code columns
+cba_tibble <- cba(mmr_est_unrounded_pwider)
+knitr::kable(cba_tibble)
+
+```
+
+
+#MMR Projections (for one country)
+```{r}
+mmr_country_projections(mmr_est_unrounded_pwider, 2016, 2030, 2010, 2017, iso_code = "AFG")
+    
+#Recoded
+mcp(mmr_est_unrounded_pwider, "AFG", 2016, 2030)
+```
+
+
+#MMR Projections (all countries)
+```{r}
+mmr_allcountries_proj_tibble <- mmr_allcountries_projections(mmr_est_unrounded_pwider, 2010, 2017)
+knitr::kable(mmr_allcountries_proj_tibble)
+
+#new function does not have arr column
+macp_tibble <- macp(mmr_est_unrounded_pwider, 2016, 2030)
+knitr::kable(macp_tibble)
+```
+
+
+#SDG MMR Calculation, Categorization, and Adjustment
+#This function currently calculates the MMR of 2030 based on a global arr from a simple calculation
+```{r}
+global_arr <- mean(cba(mmr_est_unrounded_pwider)$`arr`)
+
+mmr2015 <- mmr_est_unrounded_pwider %>% 
+  rename(MMR2015 = `2015`) %>%
+  select(`MMR2015`)
+
+mmr_sdg_proj <- get_mmr_sdg_projections(mmr2015, global_arr, 15)
+knitr::kable(mmr_sdg_proj)
+
+```
+
+
+#Squared Diff
+```{r}
+squared_diff(global_arr, mmr2015, live_birth_projections2030, 15)
+```
+
+
+#Get ARR SDG Target 
+```{r}
+get_arr_sdg_target(mmr2015, live_birth_projections2030, 15)
+arr_sdg <- 0.05603232
+```
+
+
+#Calculate SDG ARR for each country Based on SDG MMR 
+#From Pseudo Code
+```{r}
+arr_sdg_target_country <- get_arr_sdg_target_country(mmr2015, arr_sdg, 15)
+knitr::kable(arr_sdg_target_country)
+```
+
+
+#(BAU) MMR Regional Summaries
+```{r}
+#some data cleaning
+countries_and_regions <- country_info %>% 
+  left_join(regional_groupings, by = c("ISOCode" = "ISOCode")) %>%
+  select(-c(`Country.x`)) 
+
+#test
+mmr_regional_global_summaries <- mmr_regional_global_summarize(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030)
+knitr::kable(mmr_regional_global_summaries)
+
+#Recoded version
+
+#data cleaning
+#mmr, countries and regions, live births combined tibble
+md <- left_join(mmr_allcountries_projections(mmr_est_unrounded_pwider, 2010, 2017) %>% select(-c(`name`, `arr`)), countries_and_regions, by = c("iso" = "ISOCode")) %>% left_join(live_birth_projections2030 %>% select(`LocID`, `Births`), by = c("ISONum" = "LocID")) 
+
+#example
+regional_proj_summaries <- bau_mmr_regional_projection_summaries(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030, 2010, 2017, 2016, 2030)
+knitr::kable(regional_proj_summaries)
+```
+
+
+#Various tests
+```{r}
+arr_sdg_predictions <- get_arr_sdg_target_country(mmr2015, arr_sdg, 15)
+
+  #Global MMR using SDG ARR (avg of all countries)
+  (sum(get_mmr_sdg_projections(mmr2015, sum(arr_sdg_predictions) / 185, 15) * md$Births)) / (sum(md$Births)) #68.754
+
+  #Global MMR using BAU ARR (avg of all countries)
+  bau_mmr_proj <- mmr_est_unrounded_pwider$`2015` * exp(-(rep(0.0273, 185)) * (2030-2015))
+   (sum(bau_mmr_proj * md$Births)) / (sum(md$Births)) #166.529
+  #(is 170.117 by summary table calculations (using all countries' invidual arrs) above)
+
+  
+  #Global MMR using ARR = 2.9%
+  bau_mmr_proj2 <- mmr_est_unrounded_pwider$`2015` * exp(-(rep(0.029, 185)) * (2030-2015))
+  (sum(bau_mmr_proj2 * md$Births)) / (sum(md$Births)) #162.336
+
+```

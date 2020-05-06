@@ -73,13 +73,44 @@ mmr_country_projections <-
   num_years <- length(years)
   bau_tibble <- calc_bau_arr(mmr_pivotwider_tibble, bau_start_year, bau_end_year) %>% 
     filter(iso == iso_code)
-  projection <- rep(NA,num_years) #What does this do?
+  projection <- rep(NA,num_years) #creates a vector of length num_years filled with NAs 
   projection <- bau_tibble$`2015` * exp(-(bau_tibble$`arr`) * (years-2015))
   return(projection)
   }
 
 #example
 mmr_country_projections(mmr_est_unrounded_pwider, 2016, 2030, 2010, 2017, iso_code = "AFG")
+```
+
+#Recode to include arr argument
+```{r}
+mmr_cp <- function(mmr_pivotwider_tibble, arr_vector, iso_code){
+  mmr_start_year = 2016
+  mmr_end_year = 2030
+  years <- seq(mmr_start_year, mmr_end_year)
+  num_years <- length(years)
+  
+  # bau_tibble <- left_join(mmr_pivotwider_tibble, cba(mmr_pivotwider_tibble), by = "iso") %>% 
+  #   filter(iso == iso_code)
+  
+  bt <- cbind(mmr_pivotwider_tibble, arr_vector)
+  bt <- bt %>% 
+    rename(sdg_arr="MMR2015") %>% 
+    filter(iso == iso_code)
+  
+  projection <- rep(NA,num_years) #What does this do?
+  projection <- bt$`2015` * exp(-(bt$`sdg_arr`) * (years-2015))
+  return(projection)
+}
+
+b_t <- cbind(mmr_est_unrounded_pwider, get_arr_sdg_target_country(mmr2015, arr_sdg, 15))
+b_t <- b_t %>% rename(sdg_arr="MMR2015")
+
+mmr_cp(mmr_est_unrounded_pwider, get_arr_sdg_target_country(mmr2015, arr_sdg, 15), "AFG")
+
+
+
+
 ```
 
 #MMR Projections (all countries)
@@ -427,3 +458,119 @@ for (i in 1:n_iterations) {
 
 ```
 
+#Recode of bau mmr summary function
+```{r}
+#function pt1 (global summaries only)
+global_mmr_summary <-
+  function(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble){
+    mmr_df <- left_join(mmr_allcountries_projections(mmr_pivotwider_tibble, 2010, 2017) %>% select(-c(`name`, `arr`)), countries_regions_tibble, by = c("iso" = "ISOCode")) %>% left_join(birth_projections_tibble %>% select(`LocID`, `Births`), by = c("ISONum" = "LocID"))
+    
+  nvars <- ncol(mmr_df) -  4
+  global_mmrs <- rep(NA, nvars) 
+  for (i in 2:nvars){ 
+    global_mmrs[i] <- (sum(mmr_df[,i] * mmr_df$Births)) / (sum(mmr_df$Births)) 
+  } 
+  
+  global <- na.omit(global_mmrs)
+  global
+  start_year = 2016
+  end_year = 2030
+  nyears <- end_year - start_year +1
+  years <- seq(start_year, end_year)
+  gm <- data.frame(years, global)
+  gm %>% 
+    pivot_wider(names_from = `years`, values_from = `global`) %>%
+        mutate(`sdg_1` = "Global") %>%
+      select(c(16, seq(1, 15)))
+    }
+
+#example
+global_mmr_summary(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030)
+
+
+#mmr, countries and regions, live births combined tibble
+md <- left_join(mmr_allcountries_projections(mmr_est_unrounded_pwider, 2010, 2017) %>% select(-c(`name`, `arr`)), countries_and_regions, by = c("iso" = "ISOCode")) %>% left_join(live_birth_projections2030 %>% select(`LocID`, `Births`), by = c("ISONum" = "LocID")) 
+
+#regional mmr summary
+regional_mmr_summary <- function(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble, sdg1_region) {
+  #note that region must be in quotes
+  md_region <- filter(md, sdg_1 == sdg1_region)
+
+  nvars <- ncol(md_region) -  4
+  region_mmrs <- rep(NA, nvars) 
+  for (i in 2:nvars){ 
+    region_mmrs[i] <- (sum(md_region[,i] * md_region$Births)) / (sum(md_region$Births)) 
+  } 
+
+  region_mmrs <- na.omit(region_mmrs)
+  region_mmrs
+  start_year = 2016
+  end_year = 2030
+  nyears <- end_year - start_year + 1
+  year <- seq(start_year, end_year)
+  region <- data.frame(year, region_mmrs)
+  region %>% 
+    pivot_wider(names_from = `year`, values_from = `region_mmrs`) %>%
+        mutate(`sdg_1` = sdg1_region) %>%
+      select(c(16, seq(1, 15)))
+  }
+
+#region vector
+# region <- c() #what does this do? note the use of "region" above
+# 
+# region[1] <- "Australia and New Zealand"	
+# region[2] <- "Central Asia and Southern Asia"	
+# region[3] <- "Eastern Asia and South-eastern Asia"	
+# region[4] <- "Latin America and the Caribbean"	
+# region[5] <- "Northern America and Europe"	
+# region[6] <- "Oceania / Oceania excluding Australia and New Zealand"
+# region[7] <- "Sub-Saharan Africa"	
+# region[8] <- "Western Asia and Northern Africa"
+# region[9] <- "Global"
+# yr <- seq(2016, 2030)
+# st_tempcol2 <- rep(NA, 15)
+# summarytibble <- data.frame(yr, st_tempcol2) %>% 
+#   pivot_wider(names_from = `yr`, values_from = `st_tempcol2`) %>%
+#   mutate(sdg_1 = "Region")
+# 
+# 
+# #collect regional and global summaries, put into list
+# Global = global_mmr_summary(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030) 
+#        ANZ = regional_mmr_summary(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030, region[1])
+#         CASA = regional_mmr_summary(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030, region[2])
+#        EASA = regional_mmr_summary(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030, region[3])
+#        LAC = regional_mmr_summary(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030, region[4])
+#        NAE = regional_mmr_summary(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030, region[5])
+#        OOeANZ = regional_mmr_summary(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030, region[6])
+#        SSA = regional_mmr_summary(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030, region[7])
+#        WANA = regional_mmr_summary(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030, region[8])
+
+#main function
+
+bau_mmr_regional_projections <- function(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble) {
+#collect regional and global summaries, put into list
+Global = global_mmr_summary(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble) 
+       ANZ = regional_mmr_summary(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble, "Australia and New Zealand")
+        CASA = regional_mmr_summary(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble, "Central Asia and Southern Asia")
+       EASA = regional_mmr_summary(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble, "Eastern Asia and South-eastern Asia")
+       LAC = regional_mmr_summary(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble, "Latin America and the Caribbean")
+       NAE = regional_mmr_summary(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble, "Northern America and Europe")
+       OOeANZ = regional_mmr_summary(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble, "Oceania / Oceania excluding Australia and New Zealand")
+       SSA = regional_mmr_summary(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble, "Sub-Saharan Africa")
+       WANA = regional_mmr_summary(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble, "Western Asia and Northern Africa")
+
+region_projections <- list(Global, ANZ, CASA, EASA, LAC, NAE, OOeANZ, 
+                           SSA, WANA)
+
+#create summary table
+summary_table <- do.call(rbind, region_projections)
+rename(summary_table, region = "sdg_1")
+
+summary_table
+}
+
+#we need to pivotwider last b/c first we'll make the mmr summary results into columns to use a for loop
+
+bau_mmr_regional_projections(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030)
+
+```

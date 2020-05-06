@@ -144,7 +144,7 @@ squared_diff(global_arr, mmr2015, live_birth_projections2030, 15)
 #is this global? since the next get sdg arr target is country-specific
 ```{r}
 get_arr_sdg_target(mmr2015, live_birth_projections2030, 15)
-arr_sdg <- 0.05603232
+as <- 0.05603232
 ```
 
 #Calculate SDG ARR for each country Based on SDG MMR 
@@ -225,6 +225,9 @@ bau_mmr_regional_global_graph(mmr_est_unrounded_pwider, countries_and_regions, l
 
 arr_tibble <- cbind(cba(mmr_est_unrounded_pwider), get_arr_sdg_target_country(mmr2015, arr_sdg, 15)) %>%
   rename(`sdg arr` = MMR2015, `bau arr` = arr)
+
+saveRDS(arr_tibble, file = "arr_tibble.Rds")
+readRDS(file = "arr_tibble.RdS")
 
 #sdg_mmr_single_country_proj(mmr_est_unrounded_pwider, arr_tibble, "AFG", 2016, 2030)
 

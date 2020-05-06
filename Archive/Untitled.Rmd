@@ -1,0 +1,481 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+calc_bau_arr <- function(mmr_pivotwider_tibble, start_year, end_year) {
+  length_years = end_year - start_year
+  arr = (-1/(length_years))*log(mmr_pivotwider_tibble[["2017"]]/mmr_pivotwider_tibble$`2010`)
+  return(cbind(mmr_pivotwider_tibble, arr))
+}
+
+
+#recoded
+cba <- function(mmr_pivotwider_tibble) {
+  start_year = 2010
+  end_year = 2017
+  length_years = end_year - start_year 
+  arr = (-1/(length_years))*log(mmr_pivotwider_tibble[["2017"]]/mmr_pivotwider_tibble$`2010`)
+  return(cbind(select(mmr_pivotwider_tibble, `iso`), arr))
+}
+
+#recoded 2.0
+cba2 <- function(mmr_pivotwider_tibble, start_year_colnum, end_year_colnum) {
+  length_years <- end_year_colnum - start_year_colnum
+ arr = (-1/(length))*log(mmr_pivotwider_tibble[[end_year_colnum]]/mmr_pivotwider_tibble[[start_year_colnum]])
+ return(cbind(select(mmr_pivotwider_tibble, `iso`), arr))
+}
+
+cba2(mmr_est_unrounded_pwider, 3, 10)
+
+```
+
+
+```{r}
+mmr_cp <- function(mmr_pivotwider_tibble, arr_vector, iso_code){
+  mmr_start_year = 2016
+  mmr_end_year = 2030
+  years <- seq(mmr_start_year, mmr_end_year)
+  num_years <- length(years)
+  
+  # bau_tibble <- left_join(mmr_pivotwider_tibble, cba(mmr_pivotwider_tibble), by = "iso") %>% 
+  #   filter(iso == iso_code)
+  
+  test <- cbind(select(cba(mmr_est_unrounded_pwider), -c(`arr`)), get_arr_sdg_target_country(mmr2015, arr_sdg, 15))
+  
+  bt <- left_join(mmr_pivotwider_tibble, test, by = "iso") %>% 
+  filter(iso == iso_code)
+  
+  # bt <- cbind(mmr_pivotwider_tibble, arr_vector)
+  # bt <- bt %>% 
+  #   rename(sdg_arr="MMR2015") %>% 
+  #   filter(iso == iso_code)
+  
+  projection <- rep(NA,num_years) #What does this do?
+  projection <- bt$`2015` * exp(-(bt$`sdg_arr`) * (years-2015))
+  return(projection)
+}
+  
+```
+
+```{r}
+all_countries <- function(mmr_pivotwider_tibble, arr_vector, iso_code){
+  mmr_start_year = 2016
+  mmr_end_year = 2030
+  years <- seq(mmr_start_year, mmr_end_year)
+  num_years <- length(years)
+  
+  # bau_tibble <- left_join(mmr_pivotwider_tibble, cba(mmr_pivotwider_tibble), by = "iso") %>% 
+  #   filter(iso == iso_code)
+  
+  bt <- cbind(mmr_pivotwider_tibble, arr_vector)
+  bt <- bt %>% 
+    rename(sdg_arr="MMR2015") 
+  
+  projection <- rep(NA,num_years) #What does this do?
+  projection <- bt$`2015` * exp(-(bt$`sdg_arr`) * (years-2015))
+  return(projection)
+}
+
+all_countries(mmr_est_unrounded_pwider, et_arr_sdg_target_country(mmr2015, arr_sdg, 15))
+```
+
+
+```{r}
+###
+
+mmr_acp <- function(mmr_pivotwider_tibble, arr_vector) {
+  start_year = 2016
+  end_year = 2030
+  nyears <- end_year - start_year +1
+  years <- seq(2016, 2030)
+
+  test <- cbind(select(cba(mmr_est_unrounded_pwider), -c(`arr`)), get_arr_sdg_target_country(mmr2015, arr_sdg, 15))
+  
+  bau_tibble  <- NULL
+  for(i in 1:nrow(test)){
+    col <- mmr_cp(mmr_est_unrounded_pwider, arr_vector, iso_code = test$iso[i])
+    bau_tibble <- rbind(bau_tibble, col)
+    colnames(bau_tibble) <- years
+  }
+  
+  #mmr_pivotwider_tibble, arr_vector, iso_code
+  
+  #namecountry2 <- select(mmr_pivotwider_tibble, `iso` , `name`)
+  #mmrprojcountry2 <- cbind(namecountry2, bau_tibble)
+  
+  #return(mmrprojcountry2)
+  return (bau_tibble)
+}
+
+##
+mmr_cp(mmr_est_unrounded_pwider, get_arr_sdg_target_country(mmr2015, arr_sdg, 15), "AFG")
+mmr_acp(mmr_pivotwider_tibble, get_arr_sdg_target_country(mmr2015, arr_sdg, 15))
+  
+mmr_est_unrounded_pwider  
+
+##
+ sy = 2016
+  ey = 2030
+  ny <- ey - sy +1
+  ys <- seq(2016, 2030)
+
+  test <- cbind(select(cba(mmr_est_unrounded_pwider), -c(`arr`)), get_arr_sdg_target_country(mmr2015, arr_sdg, 15))
+  
+  bau_tibble  <- NULL
+  for(i in 1:nrow(test)){
+    col <- mmr_cp(mmr_est_unrounded_pwider, get_arr_sdg_target_country(mmr2015, arr_sdg, 15), iso_code = test$iso[i])
+    bau_tibble <- rbind(bau_tibble, col)
+    colnames(bau_tibble) <- ys
+  }
+  
+cba(mmr_est_unrounded_pwider) 
+test
+```
+
+#get rid of hardcoding for MMR proj funcs
+```{r}
+#function1
+mcp2 <- function(mmr_pivotwider_tibble, iso_code, mmr_start_year, mmr_end_year){
+  years <- seq(mmr_start_year, mmr_end_year)
+  num_years <- length(years)
+  
+  bau_tibble <- left_join(mmr_pivotwider_tibble, cba(mmr_pivotwider_tibble), by = "iso") %>% 
+    filter(iso == iso_code)
+  projection <- rep(NA,num_years)
+  projection <- bau_tibble$`2015` * exp(-(bau_tibble$`arr`) * (years-2015))
+  return(projection)
+}
+
+#function2
+macp2 <- function(mmr_pivotwider_tibble, mmr_start_year, mmr_end_year) {
+  nyears <- mmr_end_year - mmr_start_year +1
+  years <- seq(2016, 2030)
+  
+  bau_tibble  <- NULL
+  for(i in 1:nrow(cba(mmr_est_unrounded_pwider))){
+    col <- mcp2(mmr_est_unrounded_pwider, iso_code = cba(mmr_est_unrounded_pwider)$iso[i], 2016, 2030)
+    bau_tibble <- rbind(bau_tibble, col)
+    colnames(bau_tibble) <- years
+  }
+  
+  namecountry2 <- select(mmr_pivotwider_tibble, "iso" , "name")
+  mmrprojcountry2 <- cbind(namecountry2, bau_tibble)
+  
+  return(mmrprojcountry2)
+}
+
+
+#example
+mcp2(mmr_est_unrounded_pwider, "AFG", 2016, 2030)
+macp2(mmr_est_unrounded_pwider, 2016, 2030)
+```
+
+
+```{r}
+#recoded 2.0
+cba2 <- function(mmr_pivotwider_tibble, start_year_colnum, end_year_colnum) {
+  length_years <- end_year_colnum - start_year_colnum
+ arr = (-1/(length))*log(mmr_pivotwider_tibble[[end_year_colnum]]/mmr_pivotwider_tibble[[start_year_colnum]])
+ return(cbind(select(mmr_pivotwider_tibble, `iso`), arr))
+}
+
+cba2(mmr_est_unrounded_pwider, 3, 10)
+
+##
+calc_sdg_arr <- function(mmr2015_country, arr_sdg, nproject){
+  mmr_yr_n_country <- get_mmr_sdg_projections(mmr2015_country, arr_sdg, nproject)
+  # if you have this kind of function
+  #  get_arr(mmr_start = mmr2015_country, mmr_end = mmr_yr_n_country)
+  -1/nproject*log(mmr_yr_n_country/ mmr2015_country)
+  
+}
+
+#Alternatively, don't have arr_sdg argument and instead call get_arr_sdg_target() inside the function?
+get_arr_sdg_target <- function(mmr2015_country, births_tibble, nproject) {
+  optimize(squared_diff, interval = c(-1,1), mmr2015_country, births_tibble, nproject)
+}
+
+#recode 
+csa <- function(mmr_pivotwider_tibble, mmr2015_country, births_tibble, nproject){
+  arr_sdg <- get_arr_sdg_target(mmr2015_country, births_tibble, nproject)
+  mmr_yr_n_country <- get_mmr_sdg_projections(mmr2015_country, arr_sdg$minimum, nproject)
+  sdg_arr_vector <- -1/nproject*log(mmr_yr_n_country/mmr2015_country)
+  sdg_arr_tibble <- cbind(select(mmr_pivotwider_tibble, `iso`), sdg_arr_vector)
+  sdg_arr_tibble <- rename(sdg_arr_tibble, sdg_arr = "MMR2015")
+  sdg_arr_tibble
+}
+
+csa(mmr_est_unrounded_pwider, mmr2015, live_birth_projections2030, 15)
+
+get_arr_sdg_target_country(mmr2015, as, 15)
+
+cba2(mmr_est_unrounded_pwider, 3, 10)
+```
+
+
+#get 2030 mmr sdg projections
+```{r}
+#global_arr <- mean(cba(mmr_est_unrounded_pwider, 3, 10)$`arr`)
+
+mmr2015 <- mmr_est_unrounded_pwider %>% 
+  rename(MMR2015 = `2015`) %>%
+  select(`MMR2015`)
+
+gmsp <- function(mmr2015_country, arr, nproject) {
+  sdg_beforefix140 <- mmr2015_country[[1]] * exp(-arr * (nproject))
+  sdg_afterfix140 <- ifelse(sdg_beforefix140 >140, 140, sdg_beforefix140)
+  data.frame(sdg_afterfix140)
+}
+
+gmsp(mmr2015, 0.02729978, 15)
+```
+
+
+#Remove Hard-coding in Summary Functions
+```{r}
+#Original Stuff
+#some data cleaning
+countries_and_regions <- country_info %>% 
+  left_join(regional_groupings, by = c("ISOCode" = "ISOCode")) %>%
+  select(-c(`Country.x`)) 
+
+#test
+# mmr_regional_global_summarize(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030)
+
+#Recoded version 1.0
+
+#data cleaning
+#mmr, countries and regions, live births combined tibble
+md <- left_join(mmr_allcountries_projections(mmr_est_unrounded_pwider, 2010, 2017, 2016, 2030) %>% select(-c(`name`, `arr`)), countries_and_regions, by = c("iso" = "ISOCode")) %>% left_join(live_birth_projections2030 %>% select(`LocID`, `Births`), by = c("ISONum" = "LocID")) 
+
+
+md2 <- left_join(macp(mmr_est_unrounded_pwider, 2016, 2030) %>% select())
+
+#example
+# bau_mmr_regional_projection_summaries(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030)
+
+##
+  
+#Recoding 2.0
+gms <- function(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble, arr_start_year, arr_end_year, proj_start_year, proj_end_year){
+  
+  mmr_df2 <- left_join(
+    macp(mmr_pivotwider_tibble, proj_start_year, proj_end_year) %>% select(-c(`name`)), 
+  countries_regions_tibble,
+  by = c("iso" = "ISOCode")) %>% left_join(birth_projections_tibble %>% select(`LocID`, `Births`), by = c("ISONum" = "LocID"))
+  
+    # mmr_df <- left_join(mmr_allcountries_projections(mmr_pivotwider_tibble, arr_start_year, arr_end_year) %>% select(-c(`name`, `arr`)), countries_regions_tibble, by = c("iso" = "ISOCode")) %>% left_join(birth_projections_tibble %>% select(`LocID`, `Births`), by = c("ISONum" = "LocID"))
+    
+    nvars <- ncol(mmr_df2) -  4
+    global_mmrs <- rep(NA, nvars) 
+    for (i in 2:nvars){ 
+      global_mmrs[i] <- (sum(mmr_df2[,i] * mmr_df2$Births)) / (sum(mmr_df2$Births)) 
+    } 
+    
+    global <- na.omit(global_mmrs)
+    global
+    nyears <- proj_end_year - proj_start_year + 1
+    years <- seq(proj_start_year, proj_end_year)
+    gm <- data.frame(years, global)
+    gm %>% 
+      pivot_wider(names_from = `years`, values_from = `global`) %>%
+      mutate(`sdg_1` = "Global") %>%
+      select(c(sdg_1, 1:nyears))
+  }
+
+#first test
+gms(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030, 2010, 2017, 2016, 2030)
+
+global_mmr_summary(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030)
+
+
+
+ mmr_df2 <- left_join(
+    macp(mmr_est_unrounded_pwider, 2016, 2030) %>% select(-c(`name`)), 
+  countries_and_regions,
+  by = c("iso" = "ISOCode")) %>% left_join(live_birth_projections2030 %>% select(`LocID`, `Births`), by = c("ISONum" = "LocID"))
+ 
+ mmr_df2
+ md
+```
+
+```{r}
+rms <- function(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble, sdg1_region, proj_start_year, proj_end_year) {
+  #note that region must be in quotes
+  md_region <- filter(md, sdg_1 == sdg1_region)
+  
+  nvars <- ncol(md_region) -  4
+  region_mmrs <- rep(NA, nvars) 
+  for (i in 2:nvars){ 
+    region_mmrs[i] <- (sum(md_region[,i] * md_region$Births)) / (sum(md_region$Births)) 
+  } 
+  
+  region_mmrs <- na.omit(region_mmrs)
+  region_mmrs
+  nyears <- proj_end_year - proj_start_year + 1
+  year <- seq(proj_start_year, proj_end_year)
+  region <- data.frame(year, region_mmrs)
+  region %>% 
+    pivot_wider(names_from = `year`, values_from = `region_mmrs`) %>%
+    mutate(`sdg_1` = sdg1_region) %>%
+    select(c(sdg_1, 1:nyears))
+}
+
+#test
+rms(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030, sdg1_region = "Australia and New Zealand", 2016, 2030)
+```
+
+
+```{r}
+bmrps <- function(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble, arr_start_year, arr_end_year, proj_start_year, proj_end_year) {
+  
+  #collect regional and global summaries, put into list
+  Global = gms(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble, arr_start_year, arr_end_year, proj_start_year, proj_end_year) 
+  ANZ = rms(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble, "Australia and New Zealand", proj_start_year, proj_end_year)
+  CASA = rms(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble, "Central Asia and Southern Asia", proj_start_year, proj_end_year)
+  EASA = rms(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble, "Eastern Asia and South-eastern Asia", proj_start_year, proj_end_year)
+  LAC = rms(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble, "Latin America and the Caribbean", proj_start_year, proj_end_year)
+  NAE = rms(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble, "Northern America and Europe", proj_start_year, proj_end_year)
+  OOeANZ = rms(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble, "Oceania / Oceania excluding Australia and New Zealand", proj_start_year, proj_end_year)
+  SSA = rms(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble, "Sub-Saharan Africa", proj_start_year, proj_end_year)
+  WANA = rms(mmr_pivotwider_tibble, countries_regions_tibble, birth_projections_tibble, "Western Asia and Northern Africa", proj_start_year, proj_end_year)
+  
+  region_projections <- list(Global, ANZ, CASA, EASA, LAC, NAE, OOeANZ, 
+                             SSA, WANA)
+
+  summary_table <- do.call(rbind, region_projections)
+  summary_table <- rename(summary_table, `SDG Region` = "sdg_1")
+  
+  summary_table
+}
+
+#test
+bmrps(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030, 2010, 2017, 2016, 2030)
+
+```
+
+```{r}
+proj_start_year = 2016
+proj_end_year = 2030
+# period = proj_end_year - proj_start_year + 1
+# p1 = (proj_start_year + (period/4)) 
+# p2 = proj_start_year + 2*(period/4)
+# p3 = proj_start_year + 3*(period/4)
+
+
+
+mmr_summary_tibble <- 
+  #bmrps(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030, 2010, 2017, 2016, 2030)
+  bau_mmr_regional_projection_summaries(mmr_est_unrounded_pwider, countries_and_regions, live_birth_projections2030, proj_start_year, proj_end_year)
+
+mmr_summary_tibble %>%
+  pivot_longer(2:(proj_end_year - proj_start_year + 1), names_to = "year",values_to = "mmr") %>%
+    ggplot() + geom_point(aes(x = year,y = mmr, color = `SDG Region`)) +
+    geom_line(mapping = aes(x = year, y = mmr, group = `SDG Region`, color = `SDG Region`)) +
+    scale_x_discrete(breaks = c(2015, 2018, 2021, 2024, 2027, 2030))
+    #scale_x_discrete(breaks = c(proj_start_year, p1, p2, p3, proj_end_year))
+    #scale_x_discrete(limits = c("2016", "2030"))
+
+```
+
+
+#SDG Regional Projections
+```{r}
+mbd <- left_join(bau_mmr_all_countries_proj(mmr_est_unrounded_pwider, 3, 10, 2016, 2030) %>% select(-c(`name`)), countries_and_regions, by = c("iso" = "ISOCode")) %>% 
+      left_join(live_birth_projections2030 %>% select(`LocID`, `Births`), by = c("ISONum" = "LocID"))
+
+msd <- left_join(sdg_mmr_allcountries_proj(mmr_est_unrounded_pwider, arr_tibble, 2016, 2030) %>% select(-c("bau arr", "name")), countries_and_regions, by = c("iso" = "ISOCode")) %>% left_join(live_birth_projections2030 %>% select(`LocID`, `Births`), by = c("ISONum" = "LocID"))
+
+mbd
+msd
+
+gsms <-
+  function(mmr_pivotwider_tibble, arr_tibble, countries_regions_tibble, birth_projections_tibble, proj_start_year, proj_end_year){
+    
+    mmr_sdg_df <- left_join(sdg_mmr_allcountries_proj(mmr_est_unrounded_pwider, arr_tibble, proj_start_year, proj_end_year) %>% select(-c("bau arr", "name")), countries_regions_tibble, by = c("iso" = "ISOCode")) %>% left_join(birth_projections_tibble %>% select(`LocID`, `Births`), by = c("ISONum" = "LocID"))
+
+    nvars <- ncol(mmr_sdg_df) -  4
+    global_sdg_mmrs <- rep(NA, nvars)
+    for (i in 3:nvars){
+      global_sdg_mmrs[i] <- (sum(mmr_sdg_df[,i] * mmr_sdg_df$Births)) / (sum(mmr_sdg_df$Births))
+    }
+
+    global_sdg <- na.omit(global_sdg_mmrs)
+    global_sdg
+    nyears <- proj_end_year - proj_start_year + 1
+    years <- seq(proj_start_year, proj_end_year)
+    gsm <- data.frame(years, global_sdg)
+    gsm %>%
+      pivot_wider(names_from = `years`, values_from = `global_sdg`) %>%
+      mutate(`sdg_1` = "Global") %>%
+      select(c(sdg_1, 1:nyears))
+  }
+
+gsms(mmr_est_unrounded_pwider, arr_tibble, countries_and_regions, live_birth_projections2030, 2016, 2030)
+
+##
+
+rsms <- function(mmr_pivotwider_tibble, arr_tibble, countries_regions_tibble, birth_projections_tibble, sdg1_region, proj_start_year, proj_end_year) {
+  #note that region must be in quotes
+  mmr_sdg_df <- left_join(sdg_mmr_allcountries_proj(mmr_est_unrounded_pwider, arr_tibble, proj_start_year, proj_end_year) %>% select(-c("bau arr", "name")), countries_regions_tibble, by = c("iso" = "ISOCode")) %>% left_join(birth_projections_tibble %>% select(`LocID`, `Births`), by = c("ISONum" = "LocID"))
+
+  mmr_sdg_df_region <- filter(mmr_sdg_df, sdg_1 == sdg1_region)
+
+  nvars <- ncol(mmr_sdg_df_region) -  4
+  region_sdg_mmrs <- rep(NA, nvars)
+  for (i in 3:nvars){
+    region_sdg_mmrs[i] <- (sum(mmr_sdg_df_region[,i] * mmr_sdg_df_region$Births)) / (sum(mmr_sdg_df_region$Births))
+  }
+
+  region_sdg_mmrs <- na.omit(region_sdg_mmrs)
+  region_sdg_mmrs
+  nyears <- proj_end_year - proj_start_year + 1
+  year <- seq(proj_start_year, proj_end_year)
+  region <- data.frame(year, region_sdg_mmrs)
+  region %>%
+    pivot_wider(names_from = `year`, values_from = `region_sdg_mmrs`) %>%
+    mutate(`sdg_1` = sdg1_region) %>%
+    select(c(sdg_1, 1:nyears))
+}
+
+rsms(mmr_est_unrounded_pwider, arr_tibble, countries_and_regions, live_birth_projections2030, "Australia and New Zealand", 2016, 2030)
+
+##
+smrps <- function(mmr_pivotwider_tibble, arr_tibble, countries_regions_tibble, birth_projections_tibble, proj_start_year, proj_end_year) {
+
+  #collect regional and global summaries, put into list
+  Global = gsms(mmr_pivotwider_tibble, arr_tibble, countries_regions_tibble, birth_projections_tibble, proj_start_year, proj_end_year)
+  ANZ = rsms(mmr_pivotwider_tibble, arr_tibble, countries_regions_tibble, birth_projections_tibble, "Australia and New Zealand", proj_start_year, proj_end_year)
+  CASA = rsms(mmr_pivotwider_tibble, arr_tibble, countries_regions_tibble, birth_projections_tibble, "Central Asia and Southern Asia", proj_start_year, proj_end_year)
+  EASA = rsms(mmr_pivotwider_tibble, arr_tibble, countries_regions_tibble, birth_projections_tibble, "Eastern Asia and South-eastern Asia", proj_start_year, proj_end_year)
+  LAC = rsms(mmr_pivotwider_tibble, arr_tibble, countries_regions_tibble, birth_projections_tibble, "Latin America and the Caribbean", proj_start_year, proj_end_year)
+  NAE = rsms(mmr_pivotwider_tibble, arr_tibble, countries_regions_tibble, birth_projections_tibble, "Northern America and Europe", proj_start_year, proj_end_year)
+  OOeANZ = rsms(mmr_pivotwider_tibble, arr_tibble, countries_regions_tibble, birth_projections_tibble, "Oceania / Oceania excluding Australia and New Zealand", proj_start_year, proj_end_year)
+  SSA = rsms(mmr_pivotwider_tibble, arr_tibble, countries_regions_tibble, birth_projections_tibble, "Sub-Saharan Africa", proj_start_year, proj_end_year)
+  WANA = rsms(mmr_pivotwider_tibble, arr_tibble, countries_regions_tibble, birth_projections_tibble, "Western Asia and Northern Africa", proj_start_year, proj_end_year)
+
+  region_projections <- list(Global, ANZ, CASA, EASA, LAC, NAE, OOeANZ, SSA, WANA)
+
+  summary_table <- do.call(rbind, region_projections)
+  summary_table <- rename(summary_table, `SDG Region` = "sdg_1")
+  summary_table
+}
+
+smrps(mmr_est_unrounded_pwider, arr_tibble, countries_and_regions, live_birth_projections2030, 2016, 2030)
+
+##
+smrgg <- function(mmr_pivotwider_tibble, bau_sdg_arr_tibble, countries_regions_tibble, birth_projections_tibble, proj_start_year, proj_end_year) {
+
+  smrps(mmr_pivotwider_tibble, bau_sdg_arr_tibble, countries_regions_tibble, birth_projections_tibble, proj_start_year, proj_end_year) %>%
+    pivot_longer(2:(proj_end_year - proj_start_year + 1), names_to = "period",values_to = "mmr") %>%
+    ggplot() + geom_point(aes(x = period,y = mmr, color = `SDG Region`)) +
+    geom_line(mapping = aes(x = period, y = mmr, group = `SDG Region`, color = `SDG Region`)) +
+    scale_x_discrete(breaks = c(2015, 2018, 2021, 2024, 2027, 2030))
+}
+
+smrgg(mmr_est_unrounded_pwider, arr_tibble, countries_and_regions, live_birth_projections2030, 2016, 2030)
+smrps(mmr_est_unrounded_pwider, arr_tibble, countries_and_regions, live_birth_projections2030, 2016, 2030)
+```
+

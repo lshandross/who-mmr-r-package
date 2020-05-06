@@ -1,0 +1,259 @@
+---
+title: "Function Rewrite Notebook"
+output: html_notebook
+---
+
+#Load Package and Read-in Data
+```{r}
+library(tidyr)
+library(tidyverse)
+library(readxl)
+library(dplyr)
+library(devtools)
+library(usethis)
+library(knitr)
+
+#load_all("WHOmmr")
+
+country_info <- read_excel("country list_ 26 March 2019.xlsx")
+mmr_est_unrounded <- read.csv("mmr_unrounded.csv")
+live_birth_projections <- read_excel("wpp2019_Births-TFR-GFR-Female1549.xlsx")
+regional_groupings <- read.csv("regional_groupings_20190910_la_ac.csv")
+```  
+
+#Data Cleaning
+```{r}
+country_info <- country_info %>%
+  select(`Code`, `ISO_Numeric_Code_CODE`, `Title`) %>%
+  rename(ISOCode = `Code`, ISONum = `ISO_Numeric_Code_CODE`)
+  
+mmr_est_unrounded <- mmr_est_unrounded %>%
+  filter(`bound` == "point", `year` >= 2010) %>%
+  select(-c(`q`, `perc`, `bound`)) %>%
+  mutate("MMR" = `value` * 100000)
+
+mmr_est_unrounded_pwider <- mmr_est_unrounded %>%
+  select(-c(`value`)) %>%
+  pivot_wider(names_from = `year`, values_from = `MMR`)
+  
+regional_groupings <- regional_groupings %>%
+  select(`ISOCode`, `Country.x`, `sdg_1`)
+
+live_birth_projections2030 <- live_birth_projections %>% 
+  filter(Year == 2030) %>%
+  select(-c(`Year`)) %>%
+  rename(name = 'Location') 
+```
+
+
+#Calc BAU ARR
+```{r}
+cba_x <- function(mmr_pivotwider_tibble, start_year_colnum, end_year_colnum) {
+  length_years <- end_year_colnum - start_year_colnum + 1
+  arr = (-1/(length_years))*log(mmr_pivotwider_tibble[[end_year_colnum]]/mmr_pivotwider_tibble[[start_year_colnum]])
+  return(cbind(select(mmr_pivotwider_tibble, `iso`), arr))
+}
+
+cba_x(mmr_est_unrounded_pwider, 3, 10)
+```
+
+
+#MMR Projections Single Country
+```{r}
+#made from sdg mmr proj func
+mscp_x <- function(mmr_pivotwider_tibble, arr_tibble, arr_col_num, iso_code, mmr_start_year, mmr_end_year) {
+  years <- seq(mmr_start_year, mmr_end_year)
+  num_years <- length(years)
+  arr_tibble_iso <- arr_tibble %>% filter(iso == iso_code)
+  iso_mmr_tibble <- filter(mmr_pivotwider_tibble, iso == iso_code)
+  
+  projection <- rep(NA,num_years)
+  projection <- iso_mmr_tibble$`2015` * exp(-(arr_tibble_iso[[arr_col_num]]) * (years-2015))
+  projection
+}
+
+bau_arr <- cba_x(mmr_est_unrounded_pwider, 3, 10)
+mscp_x(mmr_est_unrounded_pwider, bau_arr, 2, "AFG", 2016, 2030)
+
+sdg_arr_vector <- readRDS(file = "Rds/sdg_arr.Rds")
+mscp_x(mmr_est_unrounded_pwider, sdg_arr_vector, 2, "AFG", 2016, 2030)
+```
+
+
+#MMR Projections All Countries
+```{r}
+macp_x <- function(mmr_pivotwider_tibble, arr_tibble, arr_col_num, mmr_start_year, mmr_end_year) {
+  mmr_proj_tibble <- NULL
+   for(i in 1: nrow(arr_tibble)){
+    col <- mscp_x(mmr_pivotwider_tibble, arr_tibble, arr_col_num, iso_code = arr_tibble$iso[i], mmr_start_year, mmr_end_year)
+    mmr_proj_tibble <- rbind(mmr_proj_tibble, col)
+   }
+  
+  colnames(mmr_proj_tibble) <- seq(mmr_start_year, mmr_end_year)
+  mmr_tibble <- cbind(select(arr_tibble, -c(arr_col_num)), mmr_proj_tibble)
+  mmr_tibble
+}
+
+bau_mmr_proj <- macp_x(mmr_est_unrounded_pwider, bau_arr, 2, 2016, 2030)
+sdg_mmr_proj <- macp_x(mmr_est_unrounded_pwider, sdg_arr_vector, 2, 2016, 2030)
+
+bau_mmr_proj
+sdg_mmr_proj 
+```
+
+
+#MMR Projections Regional
+```{r}
+births2030 <- select(live_birth_projections2030, c(`Births`, `LocID`))
+countries_and_regions <- readRDS(file = "Rds/countries_regions.Rds")
+
+gms_x <- function(mmr_pivotwider_tibble, mmr_proj_tibble, countries_regions_tibble, births_iso, proj_start_year, proj_end_year) {
+   mmr_df <- left_join(mmr_proj_tibble, countries_regions_tibble, by = c("iso" = "ISOCode")) %>%
+    left_join(births_iso, by = c("ISONum" = "LocID"))
+  
+  nvars <- proj_end_year - proj_start_year + 2
+  global_mmrs <- rep(NA, nvars)
+  for (i in 2: nvars) {
+    global_mmrs[i] <- (sum(mmr_df[,i] * mmr_df$Births)) / sum(mmr_df$Births)
+  }
+  global_mmrs <- na.omit(global_mmrs)
+  nyears <- proj_end_year - proj_start_year + 1
+  years <- seq(proj_start_year, proj_end_year)
+  global <- data.frame(years, global_mmrs)
+  global %>% pivot_wider(names_from = `years`, values_from = `global_mmrs`) %>%
+    mutate(`sdg_1` = "Global") %>% select(c(sdg_1, 1:nyears))
+}
+
+gms_x(mmr_est_unrounded_pwider, sdg_mmr_proj, countries_and_regions, births2030, 2016, 2030)
+
+##
+
+rsms_x <- function(mmr_pivotwider_tibble, mmr_proj_tibble, countries_regions_tibble, births_iso, sdg1_region, proj_start_year, proj_end_year) {
+  #note that region must be in quotes
+  mmr_df <- left_join(mmr_proj_tibble, countries_regions_tibble, by = c("iso" = "ISOCode")) %>%
+    left_join(births_iso, by = c("ISONum" = "LocID"))
+  
+  mmr_df_region <- filter(mmr_df, sdg_1 == sdg1_region)
+  
+  nvars <- proj_end_year - proj_start_year + 2
+  region_mmrs <- rep(NA, nvars)
+  for (i in 2: nvars) {
+    region_mmrs[i] <- (sum(mmr_df_region[,i] * mmr_df_region$Births)) / sum(mmr_df_region$Births)
+  }
+  region_mmrs <- na.omit(region_mmrs)
+  nyears <- proj_end_year - proj_start_year + 1
+  year <- seq(proj_start_year, proj_end_year)
+  region <- data.frame(year, region_mmrs)
+  region %>% pivot_wider(names_from = `year`, values_from = `region_mmrs`) %>% mutate(`sdg_1` = sdg1_region) %>% select(c(sdg_1, 1:nyears))
+}
+
+#rsms_x(mmr_est_unrounded_pwider, sdg_mmr_proj, countries_and_regions, births2030, "Australia and New Zealand", 2016, 2030)
+
+##
+
+smrps_x <- function(mmr_pivotwider_tibble, mmr_proj_tibble, countries_regions_tibble, births_iso, proj_start_year, proj_end_year) {
+
+  #collect regional and global summaries, put into list
+  Global = gms_x(mmr_pivotwider_tibble, mmr_proj_tibble, countries_regions_tibble, births_iso, proj_start_year, proj_end_year)
+  ANZ = rsms_x(mmr_pivotwider_tibble, mmr_proj_tibble, countries_regions_tibble, births_iso, "Australia and New Zealand", proj_start_year, proj_end_year)
+  CASA = rsms_x(mmr_pivotwider_tibble, mmr_proj_tibble, countries_regions_tibble, births_iso, "Central Asia and Southern Asia", proj_start_year, proj_end_year)
+  EASA = rsms_x(mmr_pivotwider_tibble, mmr_proj_tibble, countries_regions_tibble, births_iso, "Eastern Asia and South-eastern Asia", proj_start_year, proj_end_year)
+  LAC =  rsms_x(mmr_pivotwider_tibble, mmr_proj_tibble, countries_regions_tibble, births_iso, "Latin America and the Caribbean", proj_start_year, proj_end_year)
+  NAE = rsms_x(mmr_pivotwider_tibble, mmr_proj_tibble, countries_regions_tibble, births_iso, "Northern America and Europe", proj_start_year, proj_end_year)
+  OOeANZ = rsms_x(mmr_pivotwider_tibble, mmr_proj_tibble, countries_regions_tibble, births_iso, "Oceania / Oceania excluding Australia and New Zealand", proj_start_year, proj_end_year)
+  SSA = rsms_x(mmr_pivotwider_tibble, mmr_proj_tibble, countries_regions_tibble, births_iso, "Sub-Saharan Africa", proj_start_year, proj_end_year)
+  WANA = rsms_x(mmr_pivotwider_tibble, mmr_proj_tibble, countries_regions_tibble, births_iso, "Western Asia and Northern Africa", proj_start_year, proj_end_year)
+
+  region_projections <- list(Global, ANZ, CASA, EASA, LAC, NAE, OOeANZ, SSA, WANA)
+
+  mmr_summary_table <- do.call(rbind, region_projections)
+  mmr_summary_table <- rename(mmr_summary_table, `SDG Region` = "sdg_1")
+  mmr_summary_table
+}
+
+smrps_x(mmr_est_unrounded_pwider, bau_mmr_proj, countries_and_regions, births2030, 2016, 2030)
+smrps_x(mmr_est_unrounded_pwider, sdg_mmr_proj, countries_and_regions, births2030, 2016, 2030)
+```
+
+
+#MMR Summary Graph
+```{r}
+smrgg_x <- function(mmr_pivotwider_tibble, mmr_proj_tibble, countries_regions_tibble, births_iso, proj_start_year, proj_end_year) {
+  smrps_x(mmr_pivotwider_tibble, mmr_proj_tibble, countries_regions_tibble, births_iso, proj_start_year, proj_end_year) %>%
+    pivot_longer(2:(proj_end_year - proj_start_year + 1), names_to = "period",values_to = "mmr") %>%
+    ggplot() + geom_point(aes(x = period,y = mmr, color = `SDG Region`)) +
+    geom_line(mapping = aes(x = period, y = mmr, group = `SDG Region`, color = `SDG Region`)) +
+    scale_x_discrete(breaks = c(2015, 2018, 2021, 2024, 2027, 2030))
+}
+
+smrgg_x(mmr_est_unrounded_pwider, bau_mmr_proj, countries_and_regions, births2030, 2016, 2030)
+smrgg_x(mmr_est_unrounded_pwider, sdg_mmr_proj, countries_and_regions, births2030, 2016, 2030)
+
+```
+
+
+
+#Get MMR SDG Projections
+```{r}
+mmr2015 <- readRDS(file = "Rds/mmr2015.Rds")
+global_arr <- readRDS(file = "Rds/global_bau_arr.Rds")
+
+gmsp_x <- function(mmr2015_country, arr, nproject) {
+  sdg_beforefix140 <- mmr2015_country[[1]] * exp(-arr * (nproject))
+  sdg_afterfix140 <- ifelse(sdg_beforefix140 >140, 140, sdg_beforefix140)
+  data.frame(sdg_afterfix140)
+}
+
+gmsp_x(mmr2015, global_arr, 15)
+```
+
+
+#Squared Diff
+```{r}
+births <- live_birth_projections2030 %>%
+    right_join(mmr_est_unrounded_pwider, by = c("name" = "name")) %>%
+    select(`Births`)
+
+sd_x <- function(global_arr, mmr2015_country, births_vector, nproject){
+  sdg_prediction <- get_mmr_sdg_proj(mmr2015_country, global_arr, nproject)
+
+  mmr_births <-  births_vector * sdg_prediction
+  mmr_births1 <- filter(mmr_births, `Births` >1000) #data filtered due to large amounts that must be processed
+  mmr_births2 <- filter(mmr_births, `Births`<=1000)
+  births1 <- filter(births_vector, `Births`>500)
+  births2 <- filter(births_vector, `Births`<=500)
+  mmr_global <- (sum(mmr_births1) + sum(mmr_births2)) / (sum(births1) + sum(births2))
+  (mmr_global - 70)^2
+
+}
+
+sd_x(global_arr, mmr2015, births, 15)
+```
+
+
+#Get ARR SDG Target
+```{r}
+gast_x <- function(mmr2015_country, births_vector, nproject) {
+  optimize(sd_x, interval = c(-1,1), mmr2015_country, births_vector, nproject)
+}
+
+gast_x(mmr2015, births, 15)
+```
+
+
+#Calc SDG ARR
+```{r}
+sdg_arr_target <- gast_x(mmr2015, births, 15)$minimum
+
+csa_x <- function(mmr_pivotwider_tibble, sdg_arr_goal, mmr2015_country, nproject){
+  mmr_yr_n_country <- gmsp_x(mmr2015_country, sdg_arr_goal, nproject)
+  
+  sdg_arr_vector <- -1/nproject*log(mmr_yr_n_country/mmr2015_country)
+  sdg_arr_tibble <- cbind(select(mmr_pivotwider_tibble, `iso`), sdg_arr_vector)
+  sdg_arr_tibble <- rename(sdg_arr_tibble, sdg_arr = "sdg_afterfix140")
+  sdg_arr_tibble
+}
+
+csa_x(mmr_est_unrounded_pwider, sdg_arr_target, mmr2015, 15)
+```
+
